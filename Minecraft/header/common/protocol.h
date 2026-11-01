@@ -29,3 +29,10 @@ struct PacketHeader
 
 // 이전 방식 복원
 #pragma pack(pop)
+
+// 패킷 전송 함수
+template <typename T>
+inline bool SendPacket(SOCKET sock, const T& packet)
+{
+
+}
