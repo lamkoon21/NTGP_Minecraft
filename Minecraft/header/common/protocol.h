@@ -34,5 +34,13 @@ struct PacketHeader
 template <typename T>
 inline bool SendPacket(SOCKET sock, const T& packet)
 {
+    // 패킷 구조 검사 (컴파일 시점)
+    static_assert(std::is_trivially_copyable<PacketT>::value,
+        "패킷 구조 검사");
+
+    // 패킷 크기 검사 (컴파일 시점)
+    static_assert(sizeof(PacketT) <= UINT16_MAX, 
+        "패킷 크기 검사");
+
 
 }
