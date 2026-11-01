@@ -52,4 +52,21 @@ inline bool SendPacket(SOCKET sock, const T& packet)
     if (packetSize != static_cast<int>(sizeof(PacketT)) ||
         packetSize < static_cast<int>(sizeof(PacketHeader)))
         return false;
+
+    // 패킷 변환
+    const char* data = reinterpret_cast<const char*>(&packet);
+
+    // 패킷 전송
+    int totalSend = 0;
+    while (totalSend < packetSize)
+    {
+        const int send = ::send(sock, data + totalsend, packetSize - totalSend, 0);
+
+        if (sent == SOCKET_ERROR || sent == 0)
+            return false;
+
+        totalSend += send;
+    }
+
+    return true;
 }
