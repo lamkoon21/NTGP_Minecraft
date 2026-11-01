@@ -1,0 +1,223 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="header\character\character.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="header\chunk\chunk.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="header\objreader\objRead.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="header\skybox\skybox.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="header\texture\texture.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="header\ui\ui.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="header\world\world.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="header\block\blocktype.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\block\voxel_data.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\camera\camera.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\character\character.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\character\character_data.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\chunk\chunk.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\objreader\objRead.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\objreader\stdafx.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\pause\pause.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\renderer\renderer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\shader\shader.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\skybox\skybox.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\texture\texture.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\title\title.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\transform\tranform.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\ui\ui.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="header\world\world.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Third Party" />
+    <Filter Include="Third Party\freeglut" />
+    <Filter Include="Third Party\glew" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="third_party\freeglut\src\fg_callbacks.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_cursor.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_display.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_ext.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_font.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_font_data.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_gamemode.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_geometry.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_gl2.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_init.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_input_devices.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_joystick.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_main.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_menu.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_misc.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_overlay.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_spaceball.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_state.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_stroke_mono_roman.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_stroke_roman.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_structure.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_teapot.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_videoresize.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\fg_window.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_cmap_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_cursor_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_display_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_ext_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_gamemode_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_init_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_input_devices_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_joystick_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_main_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_menu_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_spaceball_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_state_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_structure_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\mswin\fg_window_mswin.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\freeglut\src\util\xparsegeometry_repl.c">
+      <Filter>Third Party\freeglut</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\glew\src\glew.c">
+      <Filter>Third Party\glew</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
