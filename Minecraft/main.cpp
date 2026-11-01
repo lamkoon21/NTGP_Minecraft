@@ -21,8 +21,6 @@ std::uniform_int_distribution<int> dis(0, 1000);
 int screenWidth = 1280;
 int screenHeight = 720;
 
-// git test
-
 class Light
 {
 public:
