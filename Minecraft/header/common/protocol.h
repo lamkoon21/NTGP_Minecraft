@@ -42,5 +42,14 @@ inline bool SendPacket(SOCKET sock, const T& packet)
     static_assert(sizeof(PacketT) <= UINT16_MAX, 
         "패킷 크기 검사");
 
+    // 소켓 검사
+    if (sock == INVALID_SOCKET)
+        return false;
 
+    // 전송할 패킷 크기 확인
+    const int packetSize = static_cast<int>(packet.header.size);
+
+    if (packetSize != static_cast<int>(sizeof(PacketT)) ||
+        packetSize < static_cast<int>(sizeof(PacketHeader)))
+        return false;
 }
