@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -35,6 +35,7 @@
     <ClInclude Include="header\character\character.h" />
     <ClInclude Include="header\character\character_data.h" />
     <ClInclude Include="header\chunk\chunk.h" />
+    <ClInclude Include="header\common\protocol.h" />
     <ClInclude Include="header\objreader\objRead.h" />
     <ClInclude Include="header\objreader\stdafx.h" />
     <ClInclude Include="header\pause\pause.h" />
@@ -433,9 +434,9 @@
     <RuntimeShader Include="$(ProjectDir)shader\**\*" />
   </ItemGroup>
   <Target Name="CopyRuntimeAssets" AfterTargets="Build">
-    <Copy SourceFiles="@(RuntimeResource)" DestinationFiles="@(RuntimeResource-&gt;'$(OutDir)resource\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(RuntimeShader)" DestinationFiles="@(RuntimeShader-&gt;'$(OutDir)shader\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(RuntimeLicense)" DestinationFiles="@(RuntimeLicense-&gt;'$(OutDir)licenses\%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeResource)" DestinationFiles="@(RuntimeResource->'$(OutDir)resource\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeShader)" DestinationFiles="@(RuntimeShader->'$(OutDir)shader\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RuntimeLicense)" DestinationFiles="@(RuntimeLicense->'$(OutDir)licenses\%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
   <ItemGroup>
     <RuntimeLicense Include="$(ProjectDir)licenses\*" />
