@@ -17,3 +17,15 @@ enum class PacketType : uint8_t
     SC_BLOCK_CHANGE
 };
 
+// 불필요한 패딩 제거
+#pragma pack(push, 1)
+
+// 모든 패킷의 공통 헤더
+struct PacketHeader
+{
+    uint16_t size;  // 패킷 전체 크기
+    PacketType type; // 패킷 종류
+};
+
+// 이전 방식 복원
+#pragma pack(pop)
