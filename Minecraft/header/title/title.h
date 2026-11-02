@@ -160,6 +160,8 @@ public:
 
 	void Init()
 	{
+		titleShader.setShader("shader/vertex_title.glsl", "shader/fragment_title.glsl");
+
 		//background
 		glGenVertexArrays(1, &VAO_background);
 		glGenBuffers(1, &VBO_background);
@@ -317,7 +319,6 @@ public:
 
 	void render_title()
 	{
-		titleShader.setShader("shader/vertex_title.glsl", "shader/fragment_title.glsl");
 		titleShader.use();
 
 		UseTexture_title("background");

@@ -107,6 +107,8 @@ public:
 
 	void Init()
 	{
+		MultiplayUIShader.setShader("shader/vertex_title.glsl", "shader/fragment_title.glsl"); // title 셰이더 재활용
+
 		//background
 		glGenVertexArrays(1, &VAO_MUI_background);
 		glGenBuffers(1, &VBO_MUI_background);
@@ -233,7 +235,6 @@ public:
 
 	void render_multiplayUI()
 	{
-		MultiplayUIShader.setShader("shader/vertex_title.glsl", "shader/fragment_title.glsl"); // title 셰이더 재활용
 		MultiplayUIShader.use();
 
 		UseTexture_multiplayUI("background");
