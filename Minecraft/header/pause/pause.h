@@ -160,6 +160,8 @@ public:
 
 	void Init()
 	{
+		pauseShader.setShader("shader/vertex_title.glsl", "shader/fragment_title.glsl");
+
 		//background
 		glGenVertexArrays(1, &VAO_pause_background);
 		glGenBuffers(1, &VBO_pause_background);
@@ -296,7 +298,6 @@ public:
 
 	void render_pause()
 	{
-		pauseShader.setShader("shader/vertex_title.glsl", "shader/fragment_title.glsl");
 		pauseShader.use();
 
 		UseTexture_pause("pause_background");
