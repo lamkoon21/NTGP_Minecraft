@@ -6,6 +6,7 @@
 #include "header/renderer/renderer.h"
 #include "header/world/world.h"
 #include "header/title/title.h"
+#include "header/multiplayUI/multiplayUI.h"
 #include "header/pause/pause.h"
 #include "header/ui/ui.h"
 #include <random>
@@ -70,6 +71,52 @@ GLuint VBO;
 World* world;
 Title title;
 Pause pause;
+MultiplayUI multiplayUI;
+bool ShowMultiplayUI = false;
+
+void UpdateMenu()
+{
+	// 타이틀 -> 멀티 UI
+	if (title.go_to_multi)
+	{
+		title.go_to_multi = false;
+		title.game_start = false;
+		title.select_menu = 0;
+
+		multiplayUI.go_to_title = false;
+		multiplayUI.request_connect = false;
+		multiplayUI.select_menu = 0;
+
+		ShowMultiplayUI = true;
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+		glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
+	}
+
+	// 멀티 UI 또는 일시정지 -> 타이틀
+	else if (multiplayUI.go_to_title || pause.go_to_title)
+	{
+		title.go_to_multi = false;
+		title.game_start = false;
+		title.select_menu = 0;
+
+		multiplayUI.go_to_title = false;
+		multiplayUI.request_connect = false;
+		multiplayUI.select_menu = 0;
+
+		pause.go_to_title = false;
+		pause.go_to_pause = false;
+		pause.escape = false;
+		pause.select_pause_menu = 0;
+
+		ShowMultiplayUI = false;
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+		glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
+	}
+}
 
 
 static bool SetResourceDirectory()
@@ -126,6 +173,7 @@ int main(int argc, char** argv)
 	EnterTexture();
 	title.EnterTexture_title();
 	pause.EnterTexture_pause();
+	multiplayUI.EnterTexture_multiplayUI();
 	world = new World(dis(gen));
 	world->GenerateWorld();
 	player = new Character(world);
@@ -145,6 +193,7 @@ void InitBuffer()
 	gui.Init();
 	title.Init();
 	pause.Init();
+	multiplayUI.Init();
 }
 
 
@@ -153,13 +202,13 @@ void Display()
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (title.game_start == false)
-		title.render_title();
-	else if (pause.go_to_pause)
-	{
-		pause.render_pause();
-	}
-	else
+	if (ShowMultiplayUI) multiplayUI.render_multiplayUI();			// 멀티플레이 UI
+
+	else if (title.game_start == false) title.render_title();		// 타이틀
+
+	else if (pause.go_to_pause) pause.render_pause();				// 게임 중 일시정지
+
+	else															// 게임 중
 	{
 		renderer.RenderWorld(world);
 		renderer.RenderCharacter(player);
@@ -180,52 +229,48 @@ void Reshape(int w, int h)
 
 void Keyboard(unsigned char key, int x, int y)
 {
-	switch (key)
+	if (ShowMultiplayUI) multiplayUI.Input_keyboard(key);	// 멀티플레이 UI
+
+	else if (title.game_start == false)						// 타이틀
 	{
-	case 27:                                // ESCAPE
-		if (title.game_start)
+		if (key == 27) glutLeaveMainLoop(); // ESCAPE
+		else
+		{
+			title.Input_keyboard(key);
+			if (title.game_start)							// 게임 시작 누름
+			{
+				renderer.SetupGL();
+				renderer = Renderer(&VBO, &player->camera, player, screenWidth, screenHeight);
+				glutSetCursor(GLUT_CURSOR_NONE);
+			}
+		}
+	}
+
+	else if (pause.go_to_pause)								// 게임 중 일시정지
+	{
+		pause.Input_keyboard(key);
+		if (pause.go_to_pause == false && pause.go_to_title == false) glutSetCursor(GLUT_CURSOR_NONE);
+	}
+
+	else													// 게임 중일 때
+	{
+		if (key == 27) // ESCAPE
 		{
 			pause.go_to_pause = true;
+			pause.escape = true;
+
 			glDisable(GL_DEPTH_TEST);
 			glDisable(GL_CULL_FACE);
 			glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
 		}
 		else
-			glutLeaveMainLoop();
-		break;
-	}
-
-	if (title.game_start == false)         // 타이틀일 때
-	{
-		title.Input_keyboard(key);
-
-		if (title.game_start)              // 게임시작 누르면
 		{
-			renderer.SetupGL();
-			renderer = Renderer(&VBO, &player->camera, player, screenWidth, screenHeight);
-			glutSetCursor(GLUT_CURSOR_NONE);
+			player->KeyboardInput(key);
+			light.setPos();
 		}
 	}
-	else if (pause.go_to_pause)                 // 일시정지했을 때
-	{
-		pause.Input_keyboard(key);
 
-		if (pause.go_to_pause == false)
-			glutSetCursor(GLUT_CURSOR_NONE);
-
-		if (pause.go_to_title)
-		{
-			title.game_start = false;
-			pause.go_to_title = false;
-			glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
-		}
-	}
-	else
-	{
-		player->KeyboardInput(key);
-		light.setPos();
-	}
-
+	UpdateMenu();
 	glutPostRedisplay();
 }
 
@@ -290,15 +335,13 @@ void IdleFunction()
 
 void SpecialKeyboard(int key, int x, int y)
 {
-	if (title.game_start == false)
-		title.Input_keyboard(key);
+	if (ShowMultiplayUI) multiplayUI.Input_specialkeyboard(key); // 멀티플레이 UI
 
-	else if (pause.go_to_pause)
-		pause.Input_keyboard(key);
+	else if (title.game_start == false) title.Input_keyboard(key); // 타이틀
 
-	else
-		player->SpecialKeyboardInput(key);
-	
+	else if (pause.go_to_pause) pause.Input_keyboard(key); // 게임 중 일시정지
+
+	else player->SpecialKeyboardInput(key); // 게임 중
 
 	glutPostRedisplay();
 }
@@ -309,56 +352,41 @@ void Mouse(int button, int state, int x, int y)
 	nowX = x;
 	nowY = y;
 
-	if (title.game_start == false)          // 타이틀일 때
+	// 마우스 좌표를 OpenGL 좌표로 변환
+	float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
+	float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
+
+	if (ShowMultiplayUI) multiplayUI.Input_mouse(button, state, glx, gly);	// 멀티플레이 UI
+
+	else if (title.game_start == false)	// 타이틀
 	{
-		float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
-		float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
 		title.Input_mouse(button, state, glx, gly);
 
-		if (title.game_start)               // 게임 시작 누르면
+		if (title.game_start) // 게임 시작 누름
 		{
 			renderer.SetupGL();
 			renderer = Renderer(&VBO, &player->camera, player, screenWidth, screenHeight);
 			glutSetCursor(GLUT_CURSOR_NONE);
 		}
 	}
-	else if (pause.go_to_pause)             // 일시정지 했을 때
+
+	else if (pause.go_to_pause)	// 게임 중 일시정지
 	{
-		float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
-		float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
 		pause.Input_mouse(button, state, glx, gly);
-
-		if (pause.go_to_pause == false)
-			glutSetCursor(GLUT_CURSOR_NONE);
-
-		if (pause.go_to_title)
-		{
-			title.game_start = false;
-			pause.go_to_title = false;
-			glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
-		}
-
+		if (pause.go_to_pause == false && pause.go_to_title == false) glutSetCursor(GLUT_CURSOR_NONE);
 	}
-	else
+
+	else // 게임 중
 	{
-		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-			left_button = true;
-		}
-		if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
-			right_button = true;
-		}
-		if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
-			left_button = false;
-		}
-		if (button == GLUT_RIGHT_BUTTON && state == GLUT_UP) {
-			right_button = false;
-		}
+		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) left_button = true;
+		if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) right_button = true;
+		if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) left_button = false;
+		if (button == GLUT_RIGHT_BUTTON && state == GLUT_UP) right_button = false;
 
 		player->MouseInput(left_button, right_button);
 	}
 
-	
-
+	UpdateMenu();
 	glutPostRedisplay();
 }
 
@@ -375,18 +403,15 @@ void PassiveMotion(int x, int y)
 	nowX = x;
 	nowY = y;
 
-	if (title.game_start == false)
-	{
-		float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
-		float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
-		title.Input_motion(glx, gly);
-	}
-	else if (pause.go_to_pause)
-	{
-		float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
-		float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
-		pause.Input_motion(glx, gly);
-	}
+	// 마우스 좌표를 OpenGL 좌표로 변환
+	float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
+	float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
+
+	if (ShowMultiplayUI) multiplayUI.Input_motion(glx, gly); // 멀티 UI일 때
+
+	else if (title.game_start == false) title.Input_motion(glx, gly); // 타이틀일 때
+
+	else if (pause.go_to_pause) pause.Input_motion(glx, gly); // 일시정지했을 때
 
 	glutPostRedisplay();
 }
