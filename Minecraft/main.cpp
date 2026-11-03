@@ -62,6 +62,8 @@ void Motion(int x, int y);
 void PassiveMotion(int x, int y);
 void Mouse(int button, int state, int x, int y);
 void MouseWheel(int button, int dir, int x, int y);
+//CreateWorld() 함수 선언
+void CreateWorld(int seed);
 
 
 Character* player;
