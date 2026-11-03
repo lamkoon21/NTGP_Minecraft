@@ -139,6 +139,30 @@ int main(int argc, char** argv)
 	return 0;
 }
 
+//CreateWorld() 함수 정의
+void CreateWorld(int seed)
+{
+	// 월드 생성
+	world = new World(seed);
+
+	// 청크 및 지형 생성
+	world->GenerateWorld();
+
+	// 플레이어 생성
+	player = new Character(world);
+
+	// OpenGL 초기화
+	world->Init();
+	player->Init();
+
+	// 플레이어 위치 설정
+	world->SetPlayerPos(player->camera.Position);
+
+	// Render 연결
+	renderer.camera = &player->camera;
+	renderer.player = player;
+}
+
 
 void InitBuffer()
 {
