@@ -12,10 +12,19 @@
 #include <chrono>
 #include <filesystem>
 #include <vector>
+#include <atomic>
 
 std::random_device rd;
 std::mt19937 gen(rd());
 std::uniform_int_distribution<int> dis(0, 1000);
+
+//서버로부터 받은 월드 시드
+std::atomic<int> pendingServerSeed{ 0 };
+// 서버 입장 결과
+std::atomic<bool> serverJoinReady{ false };
+std::atomic<bool> serverJoinFailed{ false };
+
+bool waitingForJoin = false;
 
 
 int screenWidth = 1280;
@@ -62,14 +71,18 @@ void Motion(int x, int y);
 void PassiveMotion(int x, int y);
 void Mouse(int button, int state, int x, int y);
 void MouseWheel(int button, int dir, int x, int y);
+
+//-----------------------------------
 //CreateWorld() 함수 선언
 void CreateWorld(int seed);
 
-
-Character* player;
+// 기존 월드와 플레이어가 존재하는 지 
+// 검사하기 위해 nullptr로 초기화
+Character* player = nullptr;
 Renderer renderer;
 GLuint VBO;
-World* world;
+World* world = nullptr;
+//------------------------------------
 Title title;
 Pause pause;
 
@@ -128,9 +141,14 @@ int main(int argc, char** argv)
 	EnterTexture();
 	title.EnterTexture_title();
 	pause.EnterTexture_pause();
-	world = new World(dis(gen));
-	world->GenerateWorld();
-	player = new Character(world);
+	// 기존 월드, 플레이어 생성 코드
+	/*
+		world = new World(dis(gen));
+		world->GenerateWorld();
+		player = new Character(world);
+	*/
+
+	CreateWorld(dis(gen));
 
 	InitBuffer();
 
@@ -142,32 +160,44 @@ int main(int argc, char** argv)
 //CreateWorld() 함수 정의
 void CreateWorld(int seed)
 {
-	// 월드 생성
+	// 기존 플레이어 삭제
+	if (player != nullptr)
+	{
+		delete player;
+		player = nullptr;
+	}
+
+	// 기존 월드 삭제
+	if (world != nullptr)
+	{
+		delete world;
+		world = nullptr;
+	}
+
+	// 새로운 월드 생성
 	world = new World(seed);
-
-	// 청크 및 지형 생성
 	world->GenerateWorld();
-
-	// 플레이어 생성
-	player = new Character(world);
-
-	// OpenGL 초기화
 	world->Init();
+
+	// 새로운 플레이어 생성
+	player = new Character(world);
 	player->Init();
 
 	// 플레이어 위치 설정
 	world->SetPlayerPos(player->camera.Position);
 
-	// Render 연결
+	// Renderer의 플레이어 참조 갱신
 	renderer.camera = &player->camera;
 	renderer.player = player;
 }
 
-
 void InitBuffer()
 {
-	player->Init();
-	world->Init();
+	// createworld 에서 진행 -> 기존 사항 비활성화
+	/*
+		player->Init();
+		world->Init();
+	*/
 	gui.Init();
 	title.Init();
 	pause.Init();
@@ -280,6 +310,32 @@ void IdleFunction()
     const auto now = Clock::now();
     const double elapsed = std::chrono::duration<double>(now - previous).count();
     previous = now;
+
+	// 서버로부터 시드를 전달받았다면
+	if (serverJoinReady.exchange(false, std::memory_order_acquire))
+	{
+		// 받은 시드 가져오기
+		int seed = pendingServerSeed.load(std::memory_order_relaxed);
+
+		// 기존 월드를 삭제하고 새로운 월드 생성
+		CreateWorld(seed);
+
+		// 멀티플레이를 위한 Renderer 초기화
+		renderer = Renderer(
+			&VBO,
+			&player->camera,
+			player,
+			screenWidth,
+			screenHeight
+		);
+
+		renderer.SetupGL();
+
+		// 게임 시작
+		title.game_start = true;
+		glutSetCursor(GLUT_CURSOR_NONE);
+	}
+
     const bool playing = title.game_start && !pause.go_to_pause;
 
     if (playing && wasPlaying) {
