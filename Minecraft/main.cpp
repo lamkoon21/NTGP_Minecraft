@@ -13,10 +13,19 @@
 #include <chrono>
 #include <filesystem>
 #include <vector>
+#include <atomic>
 
 std::random_device rd;
 std::mt19937 gen(rd());
 std::uniform_int_distribution<int> dis(0, 1000);
+
+//ï¿½ï¿½ï¿½ï¿½ï¿½Îºï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ãµï¿½
+std::atomic<int> pendingServerSeed{ 0 };
+// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
+std::atomic<bool> serverJoinReady{ false };
+std::atomic<bool> serverJoinFailed{ false };
+
+bool waitingForJoin = false;
 
 
 int screenWidth = 1280;
@@ -64,11 +73,17 @@ void PassiveMotion(int x, int y);
 void Mouse(int button, int state, int x, int y);
 void MouseWheel(int button, int dir, int x, int y);
 
+//-----------------------------------
+//CreateWorld() ï¿½Ô¼ï¿½ ï¿½ï¿½ï¿½ï¿½
+void CreateWorld(int seed);
 
-Character* player;
+// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾î°¡ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ 
+// ï¿½Ë»ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½ nullptrï¿½ï¿½ ï¿½Ê±ï¿½È­
+Character* player = nullptr;
 Renderer renderer;
 GLuint VBO;
-World* world;
+World* world = nullptr;
+//------------------------------------
 Title title;
 Pause pause;
 MultiplayUI multiplayUI;
@@ -76,7 +91,7 @@ bool ShowMultiplayUI = false;
 
 void UpdateMenu()
 {
-	// Å¸ÀÌÆ² -> ¸ÖÆ¼ UI
+	// Å¸ï¿½ï¿½Æ² -> ï¿½ï¿½Æ¼ UI
 	if (title.go_to_multi)
 	{
 		title.go_to_multi = false;
@@ -94,7 +109,7 @@ void UpdateMenu()
 		glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
 	}
 
-	// ¸ÖÆ¼ UI ¶Ç´Â ÀÏ½ÃÁ¤Áö -> Å¸ÀÌÆ²
+	// ï¿½ï¿½Æ¼ UI ï¿½Ç´ï¿½ ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½ -> Å¸ï¿½ï¿½Æ²
 	else if (multiplayUI.go_to_title || pause.go_to_title)
 	{
 		title.go_to_multi = false;
@@ -173,10 +188,14 @@ int main(int argc, char** argv)
 	EnterTexture();
 	title.EnterTexture_title();
 	pause.EnterTexture_pause();
-	multiplayUI.EnterTexture_multiplayUI();
-	world = new World(dis(gen));
-	world->GenerateWorld();
-	player = new Character(world);
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½, ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½
+	/*
+		world = new World(dis(gen));
+		world->GenerateWorld();
+		player = new Character(world);
+	*/
+
+	CreateWorld(dis(gen));
 
 	InitBuffer();
 
@@ -185,11 +204,47 @@ int main(int argc, char** argv)
 	return 0;
 }
 
+//CreateWorld() ï¿½Ô¼ï¿½ ï¿½ï¿½ï¿½ï¿½
+void CreateWorld(int seed)
+{
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½ï¿½
+	if (player != nullptr)
+	{
+		delete player;
+		player = nullptr;
+	}
+
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	if (world != nullptr)
+	{
+		delete world;
+		world = nullptr;
+	}
+
+	// ï¿½ï¿½ï¿½Î¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	world = new World(seed);
+	world->GenerateWorld();
+	world->Init();
+
+	// ï¿½ï¿½ï¿½Î¿ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½ï¿½
+	player = new Character(world);
+	player->Init();
+
+	// ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
+	world->SetPlayerPos(player->camera.Position);
+
+	// Rendererï¿½ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	renderer.camera = &player->camera;
+	renderer.player = player;
+}
 
 void InitBuffer()
 {
-	player->Init();
-	world->Init();
+	// createworld ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ -> ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È°ï¿½ï¿½È­
+	/*
+		player->Init();
+		world->Init();
+	*/
 	gui.Init();
 	title.Init();
 	pause.Init();
@@ -202,13 +257,13 @@ void Display()
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (ShowMultiplayUI) multiplayUI.render_multiplayUI();			// ¸ÖÆ¼ÇÃ·¹ÀÌ UI
+	if (ShowMultiplayUI) multiplayUI.render_multiplayUI();			// ï¿½ï¿½Æ¼ï¿½Ã·ï¿½ï¿½ï¿½ UI
 
-	else if (title.game_start == false) title.render_title();		// Å¸ÀÌÆ²
+	else if (title.game_start == false) title.render_title();		// Å¸ï¿½ï¿½Æ²
 
-	else if (pause.go_to_pause) pause.render_pause();				// °ÔÀÓ Áß ÀÏ½ÃÁ¤Áö
+	else if (pause.go_to_pause) pause.render_pause();				// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	else															// °ÔÀÓ Áß
+	else															// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
 	{
 		renderer.RenderWorld(world);
 		renderer.RenderCharacter(player);
@@ -229,15 +284,15 @@ void Reshape(int w, int h)
 
 void Keyboard(unsigned char key, int x, int y)
 {
-	if (ShowMultiplayUI) multiplayUI.Input_keyboard(key);	// ¸ÖÆ¼ÇÃ·¹ÀÌ UI
+	if (ShowMultiplayUI) multiplayUI.Input_keyboard(key);	// ï¿½ï¿½Æ¼ï¿½Ã·ï¿½ï¿½ï¿½ UI
 
-	else if (title.game_start == false)						// Å¸ÀÌÆ²
+	else if (title.game_start == false)						// Å¸ï¿½ï¿½Æ²
 	{
 		if (key == 27) glutLeaveMainLoop(); // ESCAPE
 		else
 		{
 			title.Input_keyboard(key);
-			if (title.game_start)							// °ÔÀÓ ½ÃÀÛ ´©¸§
+			if (title.game_start)							// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 			{
 				renderer.SetupGL();
 				renderer = Renderer(&VBO, &player->camera, player, screenWidth, screenHeight);
@@ -246,13 +301,13 @@ void Keyboard(unsigned char key, int x, int y)
 		}
 	}
 
-	else if (pause.go_to_pause)								// °ÔÀÓ Áß ÀÏ½ÃÁ¤Áö
+	else if (pause.go_to_pause)								// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½
 	{
 		pause.Input_keyboard(key);
 		if (pause.go_to_pause == false && pause.go_to_title == false) glutSetCursor(GLUT_CURSOR_NONE);
 	}
 
-	else													// °ÔÀÓ ÁßÀÏ ¶§
+	else													// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
 	{
 		if (key == 27) // ESCAPE
 		{
@@ -299,6 +354,32 @@ void IdleFunction()
     const auto now = Clock::now();
     const double elapsed = std::chrono::duration<double>(now - previous).count();
     previous = now;
+
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Îºï¿½ï¿½ï¿½ ï¿½Ãµå¸¦ ï¿½ï¿½ï¿½Þ¹Þ¾Ò´Ù¸ï¿½
+	if (serverJoinReady.exchange(false, std::memory_order_acquire))
+	{
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½Ãµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		int seed = pendingServerSeed.load(std::memory_order_relaxed);
+
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½å¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½Î¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+		CreateWorld(seed);
+
+		// ï¿½ï¿½Æ¼ï¿½Ã·ï¿½ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½ Renderer ï¿½Ê±ï¿½È­
+		renderer = Renderer(
+			&VBO,
+			&player->camera,
+			player,
+			screenWidth,
+			screenHeight
+		);
+
+		renderer.SetupGL();
+
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+		title.game_start = true;
+		glutSetCursor(GLUT_CURSOR_NONE);
+	}
+
     const bool playing = title.game_start && !pause.go_to_pause;
 
     if (playing && wasPlaying) {
@@ -335,13 +416,13 @@ void IdleFunction()
 
 void SpecialKeyboard(int key, int x, int y)
 {
-	if (ShowMultiplayUI) multiplayUI.Input_specialkeyboard(key); // ¸ÖÆ¼ÇÃ·¹ÀÌ UI
+	if (ShowMultiplayUI) multiplayUI.Input_specialkeyboard(key); // ï¿½ï¿½Æ¼ï¿½Ã·ï¿½ï¿½ï¿½ UI
 
-	else if (title.game_start == false) title.Input_keyboard(key); // Å¸ÀÌÆ²
+	else if (title.game_start == false) title.Input_keyboard(key); // Å¸ï¿½ï¿½Æ²
 
-	else if (pause.go_to_pause) pause.Input_keyboard(key); // °ÔÀÓ Áß ÀÏ½ÃÁ¤Áö
+	else if (pause.go_to_pause) pause.Input_keyboard(key); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	else player->SpecialKeyboardInput(key); // °ÔÀÓ Áß
+	else player->SpecialKeyboardInput(key); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
 
 	glutPostRedisplay();
 }
@@ -352,17 +433,17 @@ void Mouse(int button, int state, int x, int y)
 	nowX = x;
 	nowY = y;
 
-	// ¸¶¿ì½º ÁÂÇ¥¸¦ OpenGL ÁÂÇ¥·Î º¯È¯
+	// ï¿½ï¿½ï¿½ì½º ï¿½ï¿½Ç¥ï¿½ï¿½ OpenGL ï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½È¯
 	float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
 	float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
 
-	if (ShowMultiplayUI) multiplayUI.Input_mouse(button, state, glx, gly);	// ¸ÖÆ¼ÇÃ·¹ÀÌ UI
+	if (ShowMultiplayUI) multiplayUI.Input_mouse(button, state, glx, gly);	// ï¿½ï¿½Æ¼ï¿½Ã·ï¿½ï¿½ï¿½ UI
 
-	else if (title.game_start == false)	// Å¸ÀÌÆ²
+	else if (title.game_start == false)	// Å¸ï¿½ï¿½Æ²
 	{
 		title.Input_mouse(button, state, glx, gly);
 
-		if (title.game_start) // °ÔÀÓ ½ÃÀÛ ´©¸§
+		if (title.game_start) // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		{
 			renderer.SetupGL();
 			renderer = Renderer(&VBO, &player->camera, player, screenWidth, screenHeight);
@@ -370,13 +451,13 @@ void Mouse(int button, int state, int x, int y)
 		}
 	}
 
-	else if (pause.go_to_pause)	// °ÔÀÓ Áß ÀÏ½ÃÁ¤Áö
+	else if (pause.go_to_pause)	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½
 	{
 		pause.Input_mouse(button, state, glx, gly);
 		if (pause.go_to_pause == false && pause.go_to_title == false) glutSetCursor(GLUT_CURSOR_NONE);
 	}
 
-	else // °ÔÀÓ Áß
+	else // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
 	{
 		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) left_button = true;
 		if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) right_button = true;
@@ -403,15 +484,15 @@ void PassiveMotion(int x, int y)
 	nowX = x;
 	nowY = y;
 
-	// ¸¶¿ì½º ÁÂÇ¥¸¦ OpenGL ÁÂÇ¥·Î º¯È¯
+	// ï¿½ï¿½ï¿½ì½º ï¿½ï¿½Ç¥ï¿½ï¿½ OpenGL ï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½È¯
 	float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
 	float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
 
-	if (ShowMultiplayUI) multiplayUI.Input_motion(glx, gly); // ¸ÖÆ¼ UIÀÏ ¶§
+	if (ShowMultiplayUI) multiplayUI.Input_motion(glx, gly); // ï¿½ï¿½Æ¼ UIï¿½ï¿½ ï¿½ï¿½
 
-	else if (title.game_start == false) title.Input_motion(glx, gly); // Å¸ÀÌÆ²ÀÏ ¶§
+	else if (title.game_start == false) title.Input_motion(glx, gly); // Å¸ï¿½ï¿½Æ²ï¿½ï¿½ ï¿½ï¿½
 
-	else if (pause.go_to_pause) pause.Input_motion(glx, gly); // ÀÏ½ÃÁ¤ÁöÇßÀ» ¶§
+	else if (pause.go_to_pause) pause.Input_motion(glx, gly); // ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
 
 	glutPostRedisplay();
 }
