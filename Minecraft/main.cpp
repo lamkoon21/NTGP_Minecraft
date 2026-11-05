@@ -188,6 +188,8 @@ int main(int argc, char** argv)
 	EnterTexture();
 	title.EnterTexture_title();
 	pause.EnterTexture_pause();
+	multiplayUI.EnterTexture_multiplayUI();
+
 	// 기존 월드, 플레이어 생성 코드
 	/*
 		world = new World(dis(gen));
