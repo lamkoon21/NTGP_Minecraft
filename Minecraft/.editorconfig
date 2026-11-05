@@ -1,0 +1,6 @@
+# Keep project C++ files readable by MSVC on any Windows code page.
+[/*.{cpp,h}]
+charset = utf-8-bom
+
+[header/**.{cpp,h}]
+charset = utf-8-bom

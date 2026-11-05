@@ -1,14 +1,14 @@
-#include "net_client.h"
+ï»¿#include "net_client.h"
 
 typedef struct NetClient
 {
     SOCKET sock;
     HANDLE recvThread;
 
-    // ³ªÁß¿¡ ÆÐÅ¶ Å¥, Å¥ Àá±Ý, ²÷±è Ç¥½Ã, ³» id, ¿ùµå ½Ãµå µî »óÅÂ Ãß°¡
+    // ë‚˜ì¤‘ì— íŒ¨í‚· í, í ìž ê¸ˆ, ëŠê¹€ í‘œì‹œ, ë‚´ id, ì›”ë“œ ì‹œë“œ ë“± ìƒíƒœ ì¶”ê°€
 } NetClient;
 
-// ¼­¹ö ¿¬°á ¼ÒÄÏ°ú ¼ö½Å ½º·¹µå ÇÚµéÀ» ÀúÀåÇÏ´Â Àü¿ª º¯¼ö
+// ì„œë²„ ì—°ê²° ì†Œì¼“ê³¼ ìˆ˜ì‹  ìŠ¤ë ˆë“œ í•¸ë“¤ì„ ì €ìž¥í•˜ëŠ” ì „ì—­ ë³€ìˆ˜
 static NetClient net = { INVALID_SOCKET, NULL };
 
 DWORD WINAPI RecvThread(LPVOID arg)
@@ -18,8 +18,8 @@ DWORD WINAPI RecvThread(LPVOID arg)
     if (client == NULL || client->sock == INVALID_SOCKET)
         return 0;
 
-    // client->sockÀ¸·Î ¼ö½Å
-    // ¿Ï¼ºµÈ ÆÐÅ¶À» Å¥¿¡ ÀúÀå
+    // client->sockìœ¼ë¡œ ìˆ˜ì‹ 
+    // ì™„ì„±ëœ íŒ¨í‚·ì„ íì— ì €ìž¥
 
     return 0;
 }

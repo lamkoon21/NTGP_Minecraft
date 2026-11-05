@@ -1,12 +1,6 @@
-#pragma once
+ï»¿#pragma once
 
-#include <winsock2.h> // À©¼Ó2 ¸ŞÀÎ Çì´õ
-#include <ws2tcpip.h> // À©¼Ó2 È®Àå Çì´õ
-
-typedef struct NetClient
-{
-    SOCKET sock;
-    HANDLE recvThread;
-} NetClient;
+#include <winsock2.h> // ìœˆì†2 ë©”ì¸ í—¤ë”
+#include <ws2tcpip.h> // ìœˆì†2 í™•ì¥ í—¤ë”
 
 DWORD WINAPI RecvThread(LPVOID arg);
