@@ -39,6 +39,7 @@
     <ClInclude Include="header\objreader\objRead.h" />
     <ClInclude Include="header\objreader\stdafx.h" />
     <ClInclude Include="header\pause\pause.h" />
+    <ClInclude Include="header\protocol\protocol.h" />
     <ClInclude Include="header\renderer\renderer.h" />
     <ClInclude Include="header\shader\shader.h" />
     <ClInclude Include="header\skybox\skybox.h" />
