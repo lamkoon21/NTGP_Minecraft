@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="header\character\character.cpp" />
     <ClCompile Include="header\chunk\chunk.cpp" />
+    <ClCompile Include="header\network\net_client.cpp" />
     <ClCompile Include="header\objreader\objRead.cpp" />
     <ClCompile Include="header\skybox\skybox.cpp" />
     <ClCompile Include="header\texture\texture.cpp" />
@@ -36,6 +37,7 @@
     <ClInclude Include="header\character\character_data.h" />
     <ClInclude Include="header\chunk\chunk.h" />
     <ClInclude Include="header\MultiplayUI\multiplayUI.h" />
+    <ClInclude Include="header\network\net_client.h" />
     <ClInclude Include="header\objreader\objRead.h" />
     <ClInclude Include="header\objreader\stdafx.h" />
     <ClInclude Include="header\pause\pause.h" />
