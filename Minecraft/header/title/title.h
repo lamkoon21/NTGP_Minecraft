@@ -61,10 +61,18 @@ float multiplayer[] = {
 
 float multi_button[] = {
 	// 위치              // 컬러             // 텍스처 좌표
-	0.45f,  -0.09f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // 우측 상단
-	0.45f,  -0.25f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.95f,   // 우측 하단
-   -0.45f,  -0.25f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.95f,   // 좌측 하단
-   -0.45f,  -0.09f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 좌측 상단
+	0.45f,  -0.09f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 0.95f,   // 우측 상단
+	0.45f,  -0.25f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.9f,   // 우측 하단
+   -0.45f,  -0.25f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.9f,   // 좌측 하단
+   -0.45f,  -0.09f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 0.95f    // 좌측 상단
+};
+
+float multi_button_activate[] = {
+	// 위치                 // 컬러             // 텍스처 좌표
+	0.45f, -0.09f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 0.90f,   // 우측 상단
+	0.45f, -0.25f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.85f,   // 우측 하단
+   -0.45f, -0.25f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.85f,   // 좌측 하단
+   -0.45f, -0.09f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 0.90f    // 좌측 상단
 };
 
 float mods[] = {
@@ -130,17 +138,17 @@ unsigned int indices[] = {
 
 GLuint VAO_background;
 GLuint VAO_title_name;
-GLuint VAO_button[7];
+GLuint VAO_button[8];
 GLuint VAO_words[5];
 
 GLuint VBO_background;
 GLuint VBO_title_name;
-GLuint VBO_button[7];
+GLuint VBO_button[8];
 GLuint VBO_words[5];
 
 GLuint EBO_background;
 GLuint EBO_title_name;
-GLuint EBO_button[7];
+GLuint EBO_button[8];
 GLuint EBO_words[5];
 
 std::map<std::string, unsigned int> title_textures = { };
@@ -207,7 +215,7 @@ public:
 
 
 		//ui
-		for (int i = 0; i < 7; ++i)
+		for (int i = 0; i < 8; ++i)
 		{
 			//button
 			glGenVertexArrays(1, &VAO_button[i]);
@@ -239,10 +247,12 @@ public:
 				break;
 			case 5:
 				glBufferData(GL_ARRAY_BUFFER, sizeof(single_button_activate), single_button_activate, GL_STATIC_DRAW);
-
 				break;
 			case 6:
 				glBufferData(GL_ARRAY_BUFFER, sizeof(quit_button_activate), quit_button_activate, GL_STATIC_DRAW);
+				break;
+			case 7:
+				glBufferData(GL_ARRAY_BUFFER, sizeof(multi_button_activate), multi_button_activate, GL_STATIC_DRAW);
 				break;
 			}
 
@@ -324,6 +334,8 @@ public:
 		{
 			if (i == 0 && select_menu == 1)
 				glBindVertexArray(VAO_button[5]);
+			else if (i == 1 && select_menu == 2)
+				glBindVertexArray(VAO_button[7]);
 			else if (i == 4 && select_menu == -1)
 				glBindVertexArray(VAO_button[6]);
 			else
@@ -391,33 +403,42 @@ public:
 		}
 	}
 
-	int select_menu = 0;
+	// 0: 선택 없음, 1: 싱글플레이어, 2: 멀티플레이어, -1: 종료
+	int select_menu = 0; 
 	bool game_start = false;
+	bool go_to_multi = false;
 
 	void Input_keyboard(unsigned char key)
 	{
 		switch (key)
 		{
 		case GLUT_KEY_UP:
-			if (select_menu == 0)
+			if (select_menu == 0 || select_menu == 2)
 				select_menu = 1;
-			else
-				select_menu *= -1;
-			break;
-		case GLUT_KEY_DOWN:
-			if (select_menu == 0)
+			else if (select_menu == 1)
 				select_menu = -1;
 			else
-				select_menu *= -1;
+				select_menu = 2;
 			break;
-		case 13: // ENTER
-			if (select_menu)
-			{
-				game_start = true;
-				select_menu = 0;
-			}
+
+		case GLUT_KEY_DOWN:
+			if (select_menu == 0 || select_menu == -1)
+				select_menu = 1;
+			else if (select_menu == 1)
+				select_menu = 2;
 			else
+				select_menu = -1;
+			break;
+
+		case 13: // ENTER
+			if (select_menu == 1)
+				game_start = true;
+			else if (select_menu == 2)
+				go_to_multi = true;
+			else if (select_menu == -1)
 				exit(0);
+
+			select_menu = 0;
 			break;
 		}
 	}
@@ -435,6 +456,10 @@ public:
 				select_menu = 0;
 			}
 
+			// multiplayer button
+			else if (select_menu == 2)
+				go_to_multi = true;
+
 			//quit button
 			if (0.013f < x && x < 0.45f && -0.73f < y && y < -0.57f)
 				exit(0);
@@ -445,21 +470,15 @@ public:
 	void Input_motion(float x, float y)
 	{
 		//start button
-		if (-0.45f < x && x < 0.45f && -0.06f < y && y < 0.1f)
-		{
-			select_menu = 1;
-		}
+		if (-0.45f < x && x < 0.45f && -0.06f < y && y < 0.1f) select_menu = 1;
 
+		// multiplayer button 
+		else if (-0.45f < x && x < 0.45f && -0.25f < y && y < -0.09f) select_menu = 2;
+			
 		//quit button
-		else if (0.013f < x && x < 0.45f && -0.73f < y && y < -0.57f)
-		{
-			select_menu = -1;
-		}
-
-		else
-		{
-			select_menu = 0;
-		}
+		else if (0.013f < x && x < 0.45f && -0.73f < y && y < -0.57f) select_menu = -1;
+			
+		else select_menu = 0;
 	}
 
 };
