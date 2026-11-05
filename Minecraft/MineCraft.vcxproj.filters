@@ -95,7 +95,7 @@
     <ClInclude Include="header\world\world.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="header\common\protocol.h">
+    <ClInclude Include="header\MultiplayUI\multiplayUI.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

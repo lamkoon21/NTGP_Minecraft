@@ -35,7 +35,6 @@
     <ClInclude Include="header\character\character.h" />
     <ClInclude Include="header\character\character_data.h" />
     <ClInclude Include="header\chunk\chunk.h" />
-    <ClInclude Include="header\common\protocol.h" />
     <ClInclude Include="header\MultiplayUI\multiplayUI.h" />
     <ClInclude Include="header\objreader\objRead.h" />
     <ClInclude Include="header\objreader\stdafx.h" />
