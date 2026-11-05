@@ -101,6 +101,8 @@ void UpdateMenu()
 		multiplayUI.go_to_title = false;
 		multiplayUI.request_connect = false;
 		multiplayUI.select_menu = 0;
+		// 저장된 IP가 없을 때만 입력창에 포커스를 준다.
+		multiplayUI.SetIpFocus(multiplayUI.ip.empty());
 
 		ShowMultiplayUI = true;
 
@@ -259,7 +261,7 @@ void Display()
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (ShowMultiplayUI) multiplayUI.render_multiplayUI();			// 멀티플레이 UI
+	if (ShowMultiplayUI) multiplayUI.render_multiplayUI(screenWidth, screenHeight);	// 멀티플레이 UI
 
 	else if (title.game_start == false) title.render_title();		// 타이틀
 
