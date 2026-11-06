@@ -197,8 +197,6 @@ int main(int argc, char** argv)
 		player = new Character(world);
 	*/
 
-	CreateWorld(dis(gen));
-
 	InitBuffer();
 
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
@@ -296,6 +294,9 @@ void Keyboard(unsigned char key, int x, int y)
 			title.Input_keyboard(key);
 			if (title.game_start)							// 게임 시작 누름
 			{
+				// 게임 시작 버튼을 누르면 월드가 생성 되도록 변경
+				CreateWorld(dis(gen));
+
 				renderer.SetupGL();
 				renderer = Renderer(&VBO, &player->camera, player, screenWidth, screenHeight);
 				glutSetCursor(GLUT_CURSOR_NONE);
@@ -447,6 +448,9 @@ void Mouse(int button, int state, int x, int y)
 
 		if (title.game_start) // 게임 시작 누름
 		{
+			// 게임 시작 버튼을 누르면 월드가 생성 되도록 변경
+			CreateWorld(dis(gen));
+
 			renderer.SetupGL();
 			renderer = Renderer(&VBO, &player->camera, player, screenWidth, screenHeight);
 			glutSetCursor(GLUT_CURSOR_NONE);
