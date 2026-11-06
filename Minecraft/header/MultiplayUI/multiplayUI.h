@@ -105,132 +105,31 @@ class MultiplayUI
 public:
 	Shader MultiplayUIShader;
 
+	// 멀티 화면에 쓸 사각형 VAO를 모두 만든다. InitBuffer()에서 한 번 부른다.
 	void Init()
 	{
+		// 두 번째 호출부터는 셰이더와 GL 객체를 다시 만들지 않는다 (누수 방지)
+		if (initialized) return;
+		initialized = true;
+
 		MultiplayUIShader.setShader("shader/vertex_title.glsl", "shader/fragment_title.glsl"); // title 셰이더 재활용
 
-		//background
-		glGenVertexArrays(1, &VAO_MUI_background);
-		glGenBuffers(1, &VBO_MUI_background);
-		glGenBuffers(1, &EBO_MUI_background);
+		// 배경
+		CreateQuad(MUI_background, sizeof(MUI_background), VAO_MUI_background, VBO_MUI_background, EBO_MUI_background);
 
-		glBindVertexArray(VAO_MUI_background);
+		// 버튼과 입력 칸 : render_multiplayUI()가 select_menu에 따라 번호로 골라 그린다
+		CreateQuad(MUI_enter_button,          sizeof(MUI_enter_button),          VAO_MUI_ui[0], VBO_MUI_ui[0], EBO_MUI_ui[0]); // 0 : Enter 버튼
+		CreateQuad(MUI_quit_button,           sizeof(MUI_quit_button),           VAO_MUI_ui[1], VBO_MUI_ui[1], EBO_MUI_ui[1]); // 1 : Quit to Title 버튼
+		CreateQuad(MUI_IP_input_window,       sizeof(MUI_IP_input_window),       VAO_MUI_ui[2], VBO_MUI_ui[2], EBO_MUI_ui[2]); // 2 : IP 입력 칸
+		CreateQuad(MUI_enter_button_activate, sizeof(MUI_enter_button_activate), VAO_MUI_ui[3], VBO_MUI_ui[3], EBO_MUI_ui[3]); // 3 : Enter 버튼 (선택됨)
+		CreateQuad(MUI_quit_button_activate,  sizeof(MUI_quit_button_activate),  VAO_MUI_ui[4], VBO_MUI_ui[4], EBO_MUI_ui[4]); // 4 : Quit to Title 버튼 (선택됨)
 
-		glBindBuffer(GL_ARRAY_BUFFER, VBO_MUI_background);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_background), MUI_background, GL_STATIC_DRAW);
+		// 글자 : 같은 번호의 VAO_MUI_ui[0 ~ 2] 위에 겹쳐 그린다
+		CreateQuad(MUI_enter_arrow,    sizeof(MUI_enter_arrow),    VAO_MUI_words[0], VBO_MUI_words[0], EBO_MUI_words[0]); // 0 : Enter 버튼의 화살표
+		CreateQuad(MUI_quit_words,     sizeof(MUI_quit_words),     VAO_MUI_words[1], VBO_MUI_words[1], EBO_MUI_words[1]); // 1 : "Quit to Title"
+		CreateQuad(MUI_enter_ip_words, sizeof(MUI_enter_ip_words), VAO_MUI_words[2], VBO_MUI_words[2], EBO_MUI_words[2]); // 2 : "Enter IP"
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_MUI_background);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(MUI_indices), MUI_indices, GL_STATIC_DRAW);
-
-
-		// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		// color attribute
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		// texture coord attribute
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-
-		// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		// color attribute
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		// texture coord attribute
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-
-
-
-
-		//ui
-		for (int i = 0; i < 5; ++i)
-		{
-			//button
-			glGenVertexArrays(1, &VAO_MUI_ui[i]);
-			glGenBuffers(1, &VBO_MUI_ui[i]);
-			glGenBuffers(1, &EBO_MUI_ui[i]);
-
-			glBindVertexArray(VAO_MUI_ui[i]);
-
-			glBindBuffer(GL_ARRAY_BUFFER, VBO_MUI_ui[i]);
-
-			switch (i) // UI에 대한 버퍼 데이터 설정
-			{
-			case 0:
-				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_enter_button), MUI_enter_button, GL_STATIC_DRAW);
-				break;
-			case 1:
-				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_quit_button), MUI_quit_button, GL_STATIC_DRAW);
-				break;
-			case 2:
-				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_IP_input_window), MUI_IP_input_window, GL_STATIC_DRAW);
-				break;
-			case 3:
-				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_enter_button_activate), MUI_enter_button_activate, GL_STATIC_DRAW);
-				break;
-			case 4:
-				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_quit_button_activate), MUI_quit_button_activate, GL_STATIC_DRAW);
-				break;
-			}
-
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_MUI_ui[i]);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(MUI_indices), MUI_indices, GL_STATIC_DRAW);
-
-			// position attribute
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-			glEnableVertexAttribArray(0);
-			// color attribute
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-			glEnableVertexAttribArray(1);
-			// texture coord attribute
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-			glEnableVertexAttribArray(2);
-
-			// 글자는 버퍼가 2개만 필요하므로 2번만 반복
-			if (i > 2)continue; 
-
-			//words
-			glGenVertexArrays(1, &VAO_MUI_words[i]);
-			glGenBuffers(1, &VBO_MUI_words[i]);
-			glGenBuffers(1, &EBO_MUI_words[i]);
-
-			glBindVertexArray(VAO_MUI_words[i]);
-
-			glBindBuffer(GL_ARRAY_BUFFER, VBO_MUI_words[i]);
-
-			switch (i)
-			{
-			case 0:
-				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_enter_arrow), MUI_enter_arrow, GL_STATIC_DRAW);
-				break;
-			case 1:
-				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_quit_words), MUI_quit_words, GL_STATIC_DRAW);
-				break;
-			case 2:
-				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_enter_ip_words), MUI_enter_ip_words, GL_STATIC_DRAW);
-				break;
-			}
-
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_MUI_words[i]);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(MUI_indices), MUI_indices, GL_STATIC_DRAW);
-
-			// position attribute
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-			glEnableVertexAttribArray(0);
-			// color attribute
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-			glEnableVertexAttribArray(1);
-			// texture coord attribute
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-			glEnableVertexAttribArray(2);
-
-		}
-
-
+		glBindVertexArray(0);
 	}
 
 	void render_multiplayUI()
@@ -399,6 +298,36 @@ public:
 		else if (-0.21375f < x && x < 0.21375f && -0.48f < y && y < -0.32f) select_menu = -1;
 
 		else select_menu = 0;
+	}
+
+private:
+	bool initialized = false; // Init()을 이미 불렀는지
+
+	// 사각형 하나의 VAO, VBO, EBO를 만든다.
+	// vertices : 정점 4개 x (위치 3 + 컬러 3 + 텍스처 좌표 2)개의 float, size : 그 바이트 수
+	static void CreateQuad(const float* vertices, GLsizeiptr size, GLuint& vao, GLuint& vbo, GLuint& ebo)
+	{
+		glGenVertexArrays(1, &vao);
+		glGenBuffers(1, &vbo);
+		glGenBuffers(1, &ebo);
+
+		glBindVertexArray(vao);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, size, vertices, GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(MUI_indices), MUI_indices, GL_STATIC_DRAW);
+
+		// position attribute
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
+		// color attribute
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(1);
+		// texture coord attribute
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glEnableVertexAttribArray(2);
 	}
 
 };
