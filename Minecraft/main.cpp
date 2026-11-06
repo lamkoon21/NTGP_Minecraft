@@ -86,8 +86,7 @@ World* world = nullptr;
 //------------------------------------
 Title title;
 Pause pause;
-MultiplayUI multiplayUI;
-bool ShowMultiplayUI = false;
+Multi multi;
 
 void UpdateMenu()
 {
@@ -98,11 +97,7 @@ void UpdateMenu()
 		title.game_start = false;
 		title.select_menu = 0;
 
-		multiplayUI.go_to_title = false;
-		multiplayUI.request_connect = false;
-		multiplayUI.select_menu = 0;
-
-		ShowMultiplayUI = true;
+		multi.Open("");
 
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_CULL_FACE);
@@ -110,22 +105,21 @@ void UpdateMenu()
 	}
 
 	// 멀티 UI 또는 일시정지 -> 타이틀
-	else if (multiplayUI.go_to_title || pause.go_to_title)
+	else if (multi.go_to_title || pause.go_to_title)
 	{
 		title.go_to_multi = false;
 		title.game_start = false;
 		title.select_menu = 0;
 
-		multiplayUI.go_to_title = false;
-		multiplayUI.request_connect = false;
-		multiplayUI.select_menu = 0;
+		multi.is_open = false;
+		multi.go_to_title = false;
+		multi.request_connect = false;
+		multi.select_menu = 0;
 
 		pause.go_to_title = false;
 		pause.go_to_pause = false;
 		pause.escape = false;
 		pause.select_pause_menu = 0;
-
-		ShowMultiplayUI = false;
 
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_CULL_FACE);
@@ -188,7 +182,7 @@ int main(int argc, char** argv)
 	EnterTexture();
 	title.EnterTexture_title();
 	pause.EnterTexture_pause();
-	multiplayUI.EnterTexture_multiplayUI();
+	multi.EnterTexture_multi();
 
 	// 기존 월드, 플레이어 생성 코드
 	/*
@@ -250,7 +244,7 @@ void InitBuffer()
 	gui.Init();
 	title.Init();
 	pause.Init();
-	multiplayUI.Init();
+	multi.Init();
 }
 
 
@@ -259,7 +253,7 @@ void Display()
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (ShowMultiplayUI) multiplayUI.render_multiplayUI();			// 멀티플레이 UI
+	if (multi.is_open) multi.render_multi();			// 멀티플레이 UI
 
 	else if (title.game_start == false) title.render_title();		// 타이틀
 
@@ -286,7 +280,7 @@ void Reshape(int w, int h)
 
 void Keyboard(unsigned char key, int x, int y)
 {
-	if (ShowMultiplayUI) multiplayUI.Input_keyboard(key);	// 멀티플레이 UI
+	if (multi.is_open) multi.Input_keyboard(key);	// 멀티플레이 UI
 
 	else if (title.game_start == false)						// 타이틀
 	{
@@ -377,7 +371,8 @@ void IdleFunction()
 
 		renderer.SetupGL();
 
-		// 게임 시작
+		// 게임 시작 : IP 입력 화면을 닫아야 Display()가 게임 화면을 그린다
+		multi.is_open = false;
 		title.game_start = true;
 		glutSetCursor(GLUT_CURSOR_NONE);
 	}
@@ -418,7 +413,7 @@ void IdleFunction()
 
 void SpecialKeyboard(int key, int x, int y)
 {
-	if (ShowMultiplayUI) multiplayUI.Input_specialkeyboard(key); // 멀티플레이 UI
+	if (multi.is_open) multi.Input_specialkeyboard(key); // 멀티플레이 UI
 
 	else if (title.game_start == false) title.Input_keyboard(key); // 타이틀
 
@@ -439,7 +434,7 @@ void Mouse(int button, int state, int x, int y)
 	float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
 	float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
 
-	if (ShowMultiplayUI) multiplayUI.Input_mouse(button, state, glx, gly);	// 멀티플레이 UI
+	if (multi.is_open) multi.Input_mouse(button, state, glx, gly);	// 멀티플레이 UI
 
 	else if (title.game_start == false)	// 타이틀
 	{
@@ -490,7 +485,7 @@ void PassiveMotion(int x, int y)
 	float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
 	float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
 
-	if (ShowMultiplayUI) multiplayUI.Input_motion(glx, gly); // 멀티 UI일 때
+	if (multi.is_open) multi.Input_motion(glx, gly); // 멀티 UI일 때
 
 	else if (title.game_start == false) title.Input_motion(glx, gly); // 타이틀일 때
 
