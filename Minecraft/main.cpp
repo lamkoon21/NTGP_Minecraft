@@ -9,6 +9,7 @@
 #include "header/multiplayUI/multiplayUI.h"
 #include "header/pause/pause.h"
 #include "header/ui/ui.h"
+#include "header/multi/multi.h"
 #include <random>
 #include <chrono>
 #include <filesystem>
@@ -87,6 +88,8 @@ World* world = nullptr;
 Title title;
 Pause pause;
 MultiplayUI multiplayUI;
+// 멀티 클래스 추가
+Multi multi;
 bool ShowMultiplayUI = false;
 
 void UpdateMenu()
@@ -257,7 +260,7 @@ void Display()
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (ShowMultiplayUI) multiplayUI.render_multiplayUI();			// 멀티플레이 UI
+	if (ShowMultiplayUI) multi.render_multi();			// 멀티플레이 UI
 
 	else if (title.game_start == false) title.render_title();		// 타이틀
 
