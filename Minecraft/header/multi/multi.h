@@ -1,6 +1,6 @@
 ﻿#pragma once
-#ifndef MULTIPLAYUI_H
-#define MULTIPLAYUI_H
+#ifndef MULTI_H
+#define MULTI_H
 
 #include "GL/glew.h"
 #include "GL/freeglut.h"
@@ -103,16 +103,16 @@ GLuint EBO_MUI_background;
 GLuint EBO_MUI_ui[5];
 GLuint EBO_MUI_words[3];
 
-std::map<std::string, unsigned int> multiplayUI_textures = { };
+std::map<std::string, unsigned int> multi_textures = { };
 
-class MultiplayUI
+class Multi
 {
 public:
-	Shader MultiplayUIShader;
+	Shader multiShader;
 
 	void Init()
 	{
-		MultiplayUIShader.setShader("shader/vertex_title.glsl", "shader/fragment_title.glsl"); // title 셰이더 재활용
+		multiShader.setShader("shader/vertex_title.glsl", "shader/fragment_title.glsl"); // title 셰이더 재활용
 
 		//background
 		glGenVertexArrays(1, &VAO_MUI_background);
@@ -247,15 +247,15 @@ public:
 		glEnableVertexAttribArray(2);
 	}
 
-	void render_multiplayUI(int width, int height)
+	void render_multi(int width, int height)
 	{
-		MultiplayUIShader.use();
+		multiShader.use();
 
-		UseTexture_multiplayUI("background");
+		UseTexture_multi("background");
 		glBindVertexArray(VAO_MUI_background);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-		UseTexture_multiplayUI("button");
+		UseTexture_multi("button");
 		for (int i = 0; i < 3; ++i)
 		{
 			if (i == 0 && select_menu == 1)
@@ -274,27 +274,27 @@ public:
 		RenderIpText(width, height);
 	}
 
-	void UseTexture_multiplayUI(const char* key)
+	void UseTexture_multi(const char* key)
 	{
-		if (multiplayUI_textures.find(key) != multiplayUI_textures.end()) {
-			glBindTexture(GL_TEXTURE_2D, multiplayUI_textures[key]);
+		if (multi_textures.find(key) != multi_textures.end()) {
+			glBindTexture(GL_TEXTURE_2D, multi_textures[key]);
 		}
 		else {
 			std::cerr << "ERROR! Can't use undefined key\n";
 		}
 	}
 
-	void EnterTexture_multiplayUI()
+	void EnterTexture_multi()
 	{
-		multiplayUI_textures.clear();
-		// multiplayUI tex
-		InsertTexture_multiplayUI("background", "resource/texture/title/background.png"); // title background 재활용
+		multi_textures.clear();
+		// multi tex
+		InsertTexture_multi("background", "resource/texture/title/background.png"); // title background 재활용
 		// ui tex
-		InsertTexture_multiplayUI("button", "resource/texture/ui/multiplay_ui.png");
-		InsertTexture_multiplayUI("ip_font", "resource/texture/ui/ip_font.png");
+		InsertTexture_multi("button", "resource/texture/ui/multiplay_ui.png");
+		InsertTexture_multi("ip_font", "resource/texture/ui/ip_font.png");
 	}
 
-	void SetTexture_multiplayUI(const char* filename, unsigned int& texture)
+	void SetTexture_multi(const char* filename, unsigned int& texture)
 	{
 		stbi_set_flip_vertically_on_load(true);
 		glGenTextures(1, &texture);
@@ -315,24 +315,43 @@ public:
 		stbi_image_free(data);
 	}
 
-	void InsertTexture_multiplayUI(const char* key, const char* filename)
+	void InsertTexture_multi(const char* key, const char* filename)
 	{
-		if (multiplayUI_textures.find(key) != multiplayUI_textures.end()) {
+		if (multi_textures.find(key) != multi_textures.end()) {
 			std::cerr << "ERROR! Duplicate texture key can\'t be used\n";
 		}
 		else {
 			unsigned int texture;
-			SetTexture_multiplayUI(filename, texture);
-			multiplayUI_textures.insert({ key, texture });
+			SetTexture_multi(filename, texture);
+			multi_textures.insert({ key, texture });
 		}
 	}
 
 	std::string ip;
+	std::string message; // 화면에 표시할 메시지 (Connecting..., Connection failed, Disconnected)
 	int select_menu = 0;
+	bool is_open = false;
 
 	// main에서 요청을 처리한 뒤 false로 되돌림
 	bool request_connect = false;
 	bool go_to_title = false;
+
+	// 화면을 연다. 처음 들어올 때와 접속 실패 · 끊김으로 돌아올 때 모두 사용
+	// 마지막으로 입력한 IP는 그대로 둔다.
+	void Open(const std::string& msg)
+	{
+		is_open = true;
+		message = msg;
+		request_connect = false;
+		go_to_title = false;
+		select_menu = 0;
+		// 저장된 IP가 없을 때만 입력창에 포커스를 준다.
+		SetIpFocus(ip.empty());
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+		glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
+	}
 
 	void SetIpFocus(bool focused)
 	{
@@ -495,7 +514,7 @@ private:
 			left = right;
 		}
 
-		UseTexture_multiplayUI("ip_font");
+		UseTexture_multi("ip_font");
 		glBindVertexArray(IPtextVAO);
 		glBindBuffer(GL_ARRAY_BUFFER, IPtextVBO);
 		glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(IpTextVertex), vertices.data(), GL_STREAM_DRAW);
