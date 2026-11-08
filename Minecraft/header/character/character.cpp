@@ -1,4 +1,4 @@
-#include "character.h"
+﻿#include "character.h"
 #include "../transform/tranform.h"
 #include "../world/world.h"
 #include "../chunk/chunk.h"
@@ -634,4 +634,62 @@ glm::mat4 Character::GetViewMatrix()
     }
 
     return glm::lookAt(cameraPos, cameraPos + cameraFront, camera.Up);
+}
+
+void Character::ApplyRemoteState(const glm::vec3& pos,
+    float yaw, float pitch, int block)
+{
+    // 받은 위치를 적용하기 전에 이동 여부를 확인한다.
+    const glm::vec3 delta = pos - Position;
+    const bool moved = glm::dot(delta, delta) > 0.000001f;
+
+    Position = pos;
+
+    // 패킷의 yaw는 카메라 기준, 모델의 yaw는 반대 부호다.
+    camera.Yaw = yaw;
+    camera.Pitch = pitch;
+    HeadYaw = -yaw;
+    HeadPitch = pitch;
+    BodyYaw = HeadYaw;
+
+    // 입력 없이 받은 슬롯 번호만 적용한다.
+    // 최초 수신에는 같은 슬롯이어도 정점 생성이 필요할 수 있다.
+    if (block >= 0 && block < 9 &&
+        (block_kind != block || block_vertices.empty()))
+    {
+        block_kind = block;
+        SetBlockVertices();
+    }
+
+    // 이동 모드는 패킷에 없으므로 기본 걷기 값을 사용한다.
+    if (moved)
+    {
+        if (shake_state)
+        {
+            shake_deg += ADD_SHAKE_DEG[0];
+            if (shake_deg >= MAX_SHAKE_DEG[0])
+            {
+                shake_deg = MAX_SHAKE_DEG[0];
+                shake_state = false;
+            }
+        }
+        else
+        {
+            shake_deg -= ADD_SHAKE_DEG[0];
+            if (shake_deg <= -MAX_SHAKE_DEG[0])
+            {
+                shake_deg = -MAX_SHAKE_DEG[0];
+                shake_state = true;
+            }
+        }
+    }
+    else
+    {
+        shake_deg /= 1.1f;
+        if (glm::abs(shake_deg) < 0.1f)
+            shake_deg = 0.0f;
+    }
+
+    // 변경된 위치와 몸 각도로 신체 위치를 다시 계산한다.
+    PosUpdate();
 }

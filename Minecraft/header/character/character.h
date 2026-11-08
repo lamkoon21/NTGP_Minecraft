@@ -1,4 +1,4 @@
-#ifndef MINECRAFT_CHARACTER_H
+﻿#ifndef MINECRAFT_CHARACTER_H
 #define MINECRAFT_CHARACTER_H
 
 
@@ -113,6 +113,10 @@ public:
     void Input();
     void Update();
     glm::mat4 GetViewMatrix();
+
+    // ApplyRemoteState 선언
+    void ApplyRemoteState(const glm::vec3& pos,
+        float yaw, float pitch, int block);
 };
 
 
