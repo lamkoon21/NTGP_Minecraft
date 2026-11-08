@@ -98,7 +98,7 @@
     <ClInclude Include="header\world\world.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="header\MultiplayUI\multiplayUI.h">
+    <ClInclude Include="header\multi\multi.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="header\network\net_client.h">
