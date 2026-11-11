@@ -324,35 +324,25 @@ public:
 	bool go_to_title = false;
 
 	// 화면을 연다. 처음 들어올 때와 접속 실패 · 끊김으로 돌아올 때 모두 사용
-	// 마지막으로 입력한 IP는 그대로 둔다.
+	// 마지막으로 입력한 IP는 그대로 두고 표시할 메시지만 바꾼다.
+	// 깊이 테스트 · 컬링 · 커서 같은 GL 상태는 바꾸지 않는다.
+	// 게임 화면에서 돌아올 때는 부르는 쪽(IdleFunction의 끊김 처리)이 먼저 되돌린다.
 	void Open(const std::string& msg)
 	{
 		is_open = true;
 		message = msg;
+
+		// 남아 있던 요청을 지워 같은 요청으로 다시 접속하거나 타이틀로 가지 않게 한다.
 		request_connect = false;
 		go_to_title = false;
 		select_menu = 0;
-		// 저장된 IP가 없을 때만 입력창에 포커스를 준다.
-		SetIpFocus(ip.empty());
 
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_CULL_FACE);
-		glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
-	}
-
-	void SetIpFocus(bool focused)
-	{
-		ipFocused = focused;
-		if (focused)
-			cursorBlinkStart = std::chrono::steady_clock::now();
+		// 화면을 열자마자 입력 커서가 보이도록 깜빡임을 처음부터 시작한다.
+		cursorBlinkStart = std::chrono::steady_clock::now();
 	}
 
 	void Input_keyboard(unsigned char key)
 	{
-		// IP입력 창에 포커스가 없으면 Enter와 Esc만 처리
-		if (!ipFocused && key != 13 && key != 27)
-			return;
-
 		switch (key)
 		{
 		case 8: // BACKSPACE
@@ -404,10 +394,6 @@ public:
 	{
 		if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
 		{
-			// 입력창 안을 클릭하면 포커스를 주고, 밖이면 해제
-			SetIpFocus(MUI_IP_input_window[16] <= x && x <= MUI_IP_input_window[0] &&
-				MUI_IP_input_window[9] <= y && y <= MUI_IP_input_window[1]);
-
 			// 클릭한 위치에 맞춰 메뉴 선택 갱신
 			Input_motion(x, y);
 
@@ -438,15 +424,14 @@ private:
 	};
 
 	static constexpr std::size_t maxIpLength = 15;
-	bool ipFocused = false;
 	std::chrono::steady_clock::time_point cursorBlinkStart;
 	GLuint IPtextVAO = 0;
 	GLuint IPtextVBO = 0;
 
 	void RenderIpText(int width, int height)
 	{
-		// 포커스가 있는 동안 0.5초마다 커서를 깜빡임
-		const bool showCursor = ipFocused &&
+		// 0.5초마다 커서를 깜빡임
+		const bool showCursor =
 			((std::chrono::steady_clock::now() - cursorBlinkStart) / std::chrono::milliseconds(500)) % 2 == 0;
 		if ((ip.empty() && !showCursor) || width <= 0 || height <= 0)
 			return;

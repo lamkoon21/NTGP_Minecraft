@@ -391,6 +391,34 @@ void IdleFunction()
                 player->Update();
                 world->SetPlayerPos(player->camera.Position);
                 world->Update();
+
+                // [미구현] 네트워크 갱신과 게임 중 연결 끊김 처리 (설계: IdleFunction 수정)
+                // net.Update()와 net.Disconnect()가 아직 없어서 주석으로 둔다.
+                // 두 함수를 구현한 뒤 아래 주석을 풀고 필요한 내용을 추가할 것.
+                //
+                // - net.Update(world, player): 받은 패킷을 반영하고 내 위치를 보낸다.
+                //   연결이 끊겼으면 false를 돌려준다. 싱글플레이에서는 아무 일도 하지 않고 true를 돌려주게 만들어,
+                //   멀티인지 따로 검사하지 않고 매 틱 부른다.
+                //   일시정지 중에는 이 반복문이 돌지 않으므로 그동안 온 패킷은 큐에 쌓였다가 재개할 때 반영된다.
+                // - 끊겼으면 net.Disconnect()로 연결을 정리하고 게임을 멈춘 뒤 IP 입력 화면으로 돌아간다.
+                // - multi.Open()은 GL 상태를 바꾸지 않는다. 게임 중 켜 둔 깊이 테스트 · 컬링과 숨긴 커서를
+                //   여기서 직접 되돌려야 한다(기존 일시정지 진입과 같은 처리).
+                //   빠뜨리면 2D 화면이 컬링 · 깊이 테스트에 걸려 IP 입력 화면이 제대로 그려지지 않는다.
+                // - break로 반복문을 빠져나오고 남은 스텝은 버린다.
+                /*
+                if (!net.Update(world, player))
+                {
+                    net.Disconnect();
+                    title.game_start = false;
+
+                    glDisable(GL_DEPTH_TEST);
+                    glDisable(GL_CULL_FACE);
+                    glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
+
+                    multi.Open("Disconnected");
+                    break;
+                }
+                */
             }
         }
     }
