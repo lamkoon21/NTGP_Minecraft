@@ -85,7 +85,29 @@ const std::vector<Character*>& Remotes()
 // 내 플레이어의 위치, 시선, 든 블록 정보를 서버로 전송
 void SendMove(const Character* player)
 {
+	// 싱글플레이, 연결 끊김, 플레이어가 없는 경우에는 보내지 않는다.
+	if (player == nullptr ||
+		net.sock == INVALID_SOCKET ||
+		net.disconnected.load())
+	{
+		return;
+	}
 
+	CS_MOVE_PLAYER_PACKET packet{};
+
+	packet.state.x = player->Position.x;
+	packet.state.y = player->Position.y;
+	packet.state.z = player->Position.z;
+	packet.state.yaw = player->camera.Yaw;
+	packet.state.pitch = player->camera.Pitch;
+	packet.state.block_kind =
+		static_cast<uint8_t>(player->block_kind);
+
+	// 부분 송신 처리는 공통 SendPacket()이 담당한다.
+	if (!SendPacket(net.sock, &packet))
+	{
+		net.disconnected = true;
+	}
 }
 
 bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed)
