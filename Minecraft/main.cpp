@@ -9,6 +9,7 @@
 #include "header/multi/multi.h"
 #include "header/pause/pause.h"
 #include "header/ui/ui.h"
+#include "header/network/net_client.h"
 #include <random>
 #include <chrono>
 #include <filesystem>
@@ -392,6 +393,9 @@ void IdleFunction()
                 world->SetPlayerPos(player->camera.Position);
                 world->Update();
 
+				// 현재 네트워크 Update() 미구현 상태이므로 임시 주석 처리
+				// SendMove(player);
+
                 // [미구현] 네트워크 갱신과 게임 중 연결 끊김 처리 (설계: IdleFunction 수정)
                 // net.Update()와 net.Disconnect()가 아직 없어서 주석으로 둔다.
                 // 두 함수를 구현한 뒤 아래 주석을 풀고 필요한 내용을 추가할 것.
@@ -419,6 +423,7 @@ void IdleFunction()
                     break;
                 }
                 */
+
             }
         }
     }
