@@ -2,6 +2,7 @@
 #include "../protocol/protocol.h"
 #include <atomic>
 #include <queue>
+#include "../character/character.h"
 
 // 수신 큐에 복사해서 보관할 패킷 데이터
 typedef struct ReceivedPacket
@@ -79,6 +80,12 @@ DWORD WINAPI RecvThread(LPVOID arg)
 const std::vector<Character*>& Remotes()
 {
 	return net.remotes;
+}
+
+// 내 플레이어의 위치, 시선, 든 블록 정보를 서버로 전송
+void SendMove(const Character* player)
+{
+
 }
 
 bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed)
@@ -173,10 +180,4 @@ bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed)
 	outSeed = packet.seed;
 
 	return true;
-}
-
-// 내 플레이어의 위치, 시선, 든 블록 정보를 서버로 전송
-void SendMove(const Character* player)
-{
-
 }
