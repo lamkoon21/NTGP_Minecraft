@@ -174,3 +174,9 @@ bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed)
 
 	return true;
 }
+
+// 내 플레이어의 위치, 시선, 든 블록 정보를 서버로 전송
+void SendMove(const Character* player)
+{
+
+}

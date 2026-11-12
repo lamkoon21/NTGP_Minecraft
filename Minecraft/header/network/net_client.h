@@ -10,5 +10,8 @@ class Character;
 // 원격 플레이어 목록 반환
 const std::vector<Character*>& Remotes();
 
+// 내 플레이어의 위치, 시선, 든 블록 정보를 서버로 전송
+void SendMove(const Character* player);
+
 DWORD WINAPI RecvThread(LPVOID arg);
 bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed);
