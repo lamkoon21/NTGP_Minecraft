@@ -123,7 +123,7 @@ struct CS_BLOCK_CHANGE_PACKET {
 // ----- 서버 -> 클라이언트 -----
 // 
 // SC_JOIN_OK (8바이트) : 접속하자마자 서버가 맨 먼저 보낸다 (SendJoinData의 첫 패킷).
-// 클라이언트 ConnectServer()는 이 크기만큼만 MSG_WAITALL로 받고(최대 10초) header의 type과 size를 확인한다.
+// 클라이언트 ConnectServer()는 최대 10초 동안 이 패킷만 받고 header의 type과 size를 확인한다.
 // 뒤따라오는 SC_BLOCK_CHANGE, SC_ADD_PLAYER는 소켓에 남아 있다가 RecvThread가 받는다.
 struct SC_JOIN_OK_PACKET {
     PacketHeader header = { sizeof(SC_JOIN_OK_PACKET), SC_JOIN_OK };

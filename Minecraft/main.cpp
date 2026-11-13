@@ -1,6 +1,7 @@
 ﻿#define  _CRT_SECURE_NO_WARNINGS
 
 
+#include "header/network/net_client.h"
 #include "header/texture/texture.h"
 #include "header/character/character.h"
 #include "header/renderer/renderer.h"
@@ -13,19 +14,18 @@
 #include <chrono>
 #include <filesystem>
 #include <vector>
-#include <atomic>
 
 std::random_device rd;
 std::mt19937 gen(rd());
 std::uniform_int_distribution<int> dis(0, 1000);
 
 //서버로부터 받은 월드 시드
-std::atomic<int> pendingServerSeed{ 0 };
-// 서버 입장 결과
-std::atomic<bool> serverJoinReady{ false };
-std::atomic<bool> serverJoinFailed{ false };
-
-bool waitingForJoin = false;
+int pendingServerSeed = 0;
+HANDLE serverJoinThread = NULL;
+HANDLE serverJoinCancelEvent = NULL;
+constexpr unsigned int multiTimerInterval = 50;
+static bool multiTimerActive = false;
+static bool wasPlaying = false;
 
 
 int screenWidth = 1280;
@@ -54,11 +54,9 @@ public:
 
 void InitBuffer();
 
-
-int lastX = screenWidth / 2;
 int nowX = screenWidth / 2;
-int lastY = screenHeight / 2;
 int nowY = screenHeight / 2;
+
 Light light;
 UI gui;
 bool left_button = false, right_button = false;
@@ -67,6 +65,7 @@ void Display();
 void Reshape(int w, int h);
 void Keyboard(unsigned char key, int x, int y);
 void IdleFunction();
+void MultiplayerTimer(int);
 void SpecialKeyboard(int key, int x, int y);
 void Motion(int x, int y);
 void PassiveMotion(int x, int y);
@@ -98,15 +97,24 @@ void UpdateMenu()
 		title.select_menu = 0;
 
 		multi.Open("");
+		if (!multiTimerActive)
+		{
+			multiTimerActive = true;
+			glutTimerFunc(multiTimerInterval, MultiplayerTimer, 0);
+		}
 	}
 
 	// 멀티 화면 또는 일시정지 -> 타이틀
 	else if (multi.go_to_title || pause.go_to_title)
 	{
+		if (serverJoinThread != NULL)
+			SetEvent(serverJoinCancelEvent);
+
 		title.go_to_multi = false;
 		title.game_start = false;
 		title.select_menu = 0;
 
+		wasPlaying = false;
 		multi.is_open = false;
 		multi.go_to_title = false;
 		multi.request_connect = false;
@@ -121,6 +129,8 @@ void UpdateMenu()
 		glDisable(GL_CULL_FACE);
 		glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
 	}
+
+	glutIdleFunc(title.game_start ? IdleFunction : NULL);
 }
 
 
@@ -168,7 +178,6 @@ int main(int argc, char** argv)
 	glutDisplayFunc(Display);
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(Keyboard);
-	glutIdleFunc(IdleFunction);
 	glutSpecialFunc(SpecialKeyboard);
 	glutMotionFunc(Motion);
 	glutPassiveMotionFunc(PassiveMotion);
@@ -191,6 +200,14 @@ int main(int argc, char** argv)
 
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 	glutMainLoop();
+	if (serverJoinThread != NULL)
+	{
+		SetEvent(serverJoinCancelEvent);
+		WaitForSingleObject(serverJoinThread, INFINITE);
+		FinishServerJoin(false);
+		CloseHandle(serverJoinThread);
+		CloseHandle(serverJoinCancelEvent);
+	}
 	return 0;
 }
 
@@ -226,6 +243,106 @@ void CreateWorld(int seed)
 	// Renderer의 플레이어 참조 갱신
 	renderer.camera = &player->camera;
 	renderer.player = player;
+}
+
+void StartMultiplayer()
+{
+	if (serverJoinThread == NULL)
+	{
+		if (!multi.is_open || !multi.request_connect)
+			return;
+
+		// 접속 스레드용 IP 복사
+		static char serverIp[INET_ADDRSTRLEN];
+		strcpy_s(serverIp, sizeof(serverIp), multi.ip.c_str());
+		serverJoinCancelEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+		if (serverJoinCancelEvent != NULL)
+		{
+			// 서버 입장 요청
+			serverJoinThread = CreateThread(NULL, 0, [](LPVOID address) -> DWORD
+			{
+				uint8_t playerId = 0;
+				ConnectServer((const char*)address, playerId, pendingServerSeed, serverJoinCancelEvent);
+				return 0;
+			}, serverIp, 0, NULL);
+
+			if (serverJoinThread == NULL)
+			{
+				CloseHandle(serverJoinCancelEvent);
+				serverJoinCancelEvent = NULL;
+			}
+		}
+
+		multi.Open(serverJoinThread != NULL ? "Connecting..." : "Connection Failed");
+
+		glutPostRedisplay();
+		return;
+	}
+
+	// 대기 없이 접속 스레드의 종료 여부 확인
+	if (WaitForSingleObject(serverJoinThread, 0) != WAIT_OBJECT_0)
+		return;
+
+	CloseHandle(serverJoinThread);
+	CloseHandle(serverJoinCancelEvent);
+	serverJoinThread = NULL;
+	serverJoinCancelEvent = NULL;
+
+	// 화면을 나간 접속 요청의 결과 무시
+	if (!multi.is_open || multi.message != "Connecting...")
+	{
+		FinishServerJoin(false);
+		return;
+	}
+
+	if (!FinishServerJoin(true))
+	{
+		multi.Open("Connection Failed");
+		glutPostRedisplay();
+		return;
+	}
+
+	// 서버 시드로 월드 초기화
+	CreateWorld(pendingServerSeed);
+	renderer = Renderer(
+		&VBO,
+		&player->camera,
+		player,
+		screenWidth,
+		screenHeight
+	);
+	renderer.SetupGL();
+
+	// 게임 시작
+	multi.is_open = false;
+	title.game_start = true;
+	glutSetCursor(GLUT_CURSOR_NONE);
+	glutIdleFunc(IdleFunction);
+	glutPostRedisplay();
+}
+
+void MultiplayerTimer(int)
+{
+	static int lastFrame = -1;
+
+	StartMultiplayer();
+
+	// 멀티 화면 애니메이션
+	if (multi.is_open)
+	{
+		int frame = multi.AnimationFrame();
+		if (frame != lastFrame)
+			glutPostRedisplay();
+		lastFrame = frame;
+	}
+
+	if (multi.is_open || serverJoinThread != NULL)
+		glutTimerFunc(multiTimerInterval, MultiplayerTimer, 0);
+	else
+	{
+		multiTimerActive = false;
+		lastFrame = -1;
+	}
 }
 
 void InitBuffer()
@@ -270,6 +387,7 @@ void Reshape(int w, int h)
 	screenHeight = h;
 	glViewport(0, 0, w, h);
 	renderer.SetScreenSize(w, h);
+	glutPostRedisplay();
 }
 
 void Keyboard(unsigned char key, int x, int y)
@@ -343,35 +461,9 @@ void IdleFunction()
     using Clock = std::chrono::steady_clock;
     static auto previous = Clock::now();
     static double accumulator = 0.0;
-    static bool wasPlaying = false;
     const auto now = Clock::now();
     const double elapsed = std::chrono::duration<double>(now - previous).count();
     previous = now;
-
-	// 서버로부터 시드를 전달받았다면
-	if (serverJoinReady.exchange(false, std::memory_order_acquire))
-	{
-		// 받은 시드 가져오기
-		int seed = pendingServerSeed.load(std::memory_order_relaxed);
-
-		// 기존 월드를 삭제하고 새로운 월드 생성
-		CreateWorld(seed);
-
-		// 멀티플레이를 위한 Renderer 초기화
-		renderer = Renderer(
-			&VBO,
-			&player->camera,
-			player,
-			screenWidth,
-			screenHeight
-		);
-
-		renderer.SetupGL();
-
-		// 게임 시작
-		title.game_start = true;
-		glutSetCursor(GLUT_CURSOR_NONE);
-	}
 
     const bool playing = title.game_start && !pause.go_to_pause;
 
@@ -512,9 +604,20 @@ void PassiveMotion(int x, int y)
 	float glx = ((float)x - (float)screenWidth / 2.0f) * (1.0f / ((float)screenWidth / 2.0f));
 	float gly = -((float)y - (float)screenHeight / 2.0f) * (1.0f / ((float)screenHeight / 2.0f));
 
-	if (multi.is_open) multi.Input_motion(glx, gly); // 멀티 IP 입력 화면일 때
-
-	else if (title.game_start == false) title.Input_motion(glx, gly); // 타이틀일 때
+	if (multi.is_open)
+	{
+		int selected = multi.select_menu;
+		multi.Input_motion(glx, gly);
+		if (selected == multi.select_menu)
+			return;
+	}
+	else if (title.game_start == false)
+	{
+		int selected = title.select_menu;
+		title.Input_motion(glx, gly);
+		if (selected == title.select_menu)
+			return;
+	}
 
 	else if (pause.go_to_pause) pause.Input_motion(glx, gly); // 일시정지했을 때
 
@@ -527,7 +630,8 @@ void Motion(int x, int y)
 	nowX = x;
 	nowY = y;
 
-	glutPostRedisplay();
+	if (title.game_start)
+		glutPostRedisplay();
 }
 
 
