@@ -86,6 +86,35 @@ float MUI_quit_words[] = {
    -0.1305f, -0.368f, 0.0f,  1.0f, 1.0f, 0.0f,   0.355f, 0.17f    // 좌측 상단
 };
 
+const float MUI_status_words[][4 * 8] = {
+	{
+		// 위치                            // 컬러             // 텍스처 좌표
+		-0.011f,  -0.04f,   0.0f,    1.0f, 0.0f, 0.0f,   0.5f, 1.0f,   // 오른 위
+		-0.011f,  -0.206f,  0.0f,    0.0f, 1.0f, 0.0f,   0.5f, 0.9f,   // 오른 아래
+		-0.48f,   -0.206f,  0.0f,    0.0f, 0.0f, 1.0f,   0.0f, 0.9f,   // 왼쪽 아래
+		-0.48f,   -0.04f,   0.0f,    1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 왼쪽 위
+	},
+	{
+		-0.011f,  -0.04f,   0.0f,    1.0f, 0.0f, 0.0f,   0.5f, 0.9f,
+		-0.011f,  -0.206f,  0.0f,    0.0f, 1.0f, 0.0f,   0.5f, 0.8f,
+		-0.48f,   -0.206f,  0.0f,    0.0f, 0.0f, 1.0f,   0.0f, 0.8f,
+		-0.48f,   -0.04f,   0.0f,    1.0f, 1.0f, 0.0f,   0.0f, 0.9f
+	},
+	{
+		-0.011f,  -0.04f,   0.0f,    1.0f, 0.0f, 0.0f,   0.5f, 0.8f,
+		-0.011f,  -0.206f,  0.0f,    0.0f, 1.0f, 0.0f,   0.5f, 0.7f,
+		-0.48f,   -0.206f,  0.0f,    0.0f, 0.0f, 1.0f,   0.0f, 0.7f,
+		-0.48f,   -0.04f,   0.0f,    1.0f, 1.0f, 0.0f,   0.0f, 0.8f
+	},
+	{
+		// 위치                            // 컬러             // 텍스처 좌표
+		-0.011f,  -0.04f,   0.0f,    1.0f, 0.0f, 0.0f,   0.5f, 0.7f,   // 오른 위
+		-0.011f,  -0.206f,  0.0f,    0.0f, 1.0f, 0.0f,   0.5f, 0.6f,   // 오른 아래
+		-0.48f,   -0.206f,  0.0f,    0.0f, 0.0f, 1.0f,   0.0f, 0.6f,   // 왼쪽 아래
+		-0.48f,   -0.04f,   0.0f,    1.0f, 1.0f, 0.0f,   0.0f, 0.7f    // 왼쪽 위
+	}
+};
+
 unsigned int MUI_indices[] = {
 		0, 1, 3, // first triangle
 		1, 2, 3  // second triangle
@@ -93,15 +122,15 @@ unsigned int MUI_indices[] = {
 
 GLuint VAO_MUI_background;
 GLuint VAO_MUI_ui[5];
-GLuint VAO_MUI_words[3];
+GLuint VAO_MUI_words[4];
 
 GLuint VBO_MUI_background;
 GLuint VBO_MUI_ui[5];
-GLuint VBO_MUI_words[3];
+GLuint VBO_MUI_words[4];
 
 GLuint EBO_MUI_background;
 GLuint EBO_MUI_ui[5];
-GLuint EBO_MUI_words[3];
+GLuint EBO_MUI_words[4];
 
 std::map<std::string, unsigned int> multi_textures = { };
 
@@ -182,8 +211,7 @@ public:
 			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 			glEnableVertexAttribArray(2);
 
-			// 글자는 버퍼가 2개만 필요하므로 2번만 반복
-			if (i > 2)continue; 
+			if (i > 3) continue;
 
 			//words
 			glGenVertexArrays(1, &VAO_MUI_words[i]);
@@ -204,6 +232,9 @@ public:
 				break;
 			case 2:
 				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_enter_ip_words), MUI_enter_ip_words, GL_STATIC_DRAW);
+				break;
+			case 3:
+				glBufferData(GL_ARRAY_BUFFER, sizeof(MUI_status_words), MUI_status_words, GL_STATIC_DRAW);
 				break;
 			}
 
@@ -259,6 +290,14 @@ public:
 		}
 
 		RenderIpText(width, height);
+
+		if (message == "Connecting..." || message == "Connection Failed")
+		{
+			int frame = message == "Connecting..." ? AnimationFrame() : 3;
+			UseTexture_multi("status");
+			glBindVertexArray(VAO_MUI_words[3]);
+			glDrawElementsBaseVertex(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, frame * 4);
+		}
 	}
 
 	void UseTexture_multi(const char* key)
@@ -279,6 +318,7 @@ public:
 		// ui tex
 		InsertTexture_multi("button", "resource/texture/ui/multiplay_ui.png");
 		InsertTexture_multi("ip_font", "resource/texture/ui/ip_font.png");
+		InsertTexture_multi("status", "resource/texture/ui/multiplay_status.png");
 	}
 
 	void SetTexture_multi(const char* filename, unsigned int& texture)
@@ -341,19 +381,28 @@ public:
 		cursorBlinkStart = std::chrono::steady_clock::now();
 	}
 
+	int AnimationFrame() const
+	{
+		const auto elapsed = std::chrono::steady_clock::now() - cursorBlinkStart;
+		if (message == "Connecting...")
+			return static_cast<int>((elapsed / std::chrono::milliseconds(400)) % 3);
+		return static_cast<int>((elapsed / std::chrono::milliseconds(500)) % 2);
+	}
+
 	void Input_keyboard(unsigned char key)
 	{
+		const bool connecting = message == "Connecting...";
 		switch (key)
 		{
 		case 8: // BACKSPACE
-			if (!ip.empty())
+			if (!connecting && !ip.empty())
 				ip.pop_back();
 			break;
 
 		case 13: // ENTER
 			if (select_menu == -1)
 				go_to_title = true;
-			else if (!ip.empty())
+			else if (!ip.empty() && !connecting)
 				request_connect = true;
 			break;
 
@@ -363,7 +412,7 @@ public:
 
 		default:
 			// IPv4 주소: 숫자와 점만 입력, 최대 15글자
-			if (ip.size() < maxIpLength && ((key >= '0' && key <= '9') || key == '.'))
+			if (!connecting && ip.size() < maxIpLength && ((key >= '0' && key <= '9') || key == '.'))
 				ip += key;
 			break;
 		}
@@ -398,7 +447,8 @@ public:
 			Input_motion(x, y);
 
 			// enter button
-			if (select_menu == 1 && !ip.empty()) request_connect = true;
+			if (select_menu == 1 && !ip.empty() && message != "Connecting...")
+				request_connect = true;
 
 			// quit button
 			else if (select_menu == -1) go_to_title = true;
@@ -431,8 +481,7 @@ private:
 	void RenderIpText(int width, int height)
 	{
 		// 0.5초마다 커서를 깜빡임
-		const bool showCursor =
-			((std::chrono::steady_clock::now() - cursorBlinkStart) / std::chrono::milliseconds(500)) % 2 == 0;
+		const bool showCursor = message != "Connecting..." && AnimationFrame() == 0;
 		if ((ip.empty() && !showCursor) || width <= 0 || height <= 0)
 			return;
 
