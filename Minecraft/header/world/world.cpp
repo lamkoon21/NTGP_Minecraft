@@ -27,11 +27,50 @@ void World::GenerateWorld()
 
 void World::CreateNewChunk(int x, int z)
 {
- 	Chunk* newChunk = new Chunk(x, z, this);
+	const std::pair<int, int> chunkPos{ x, z };
+
+	// 이미 만들어진 청크는 다시 생성하지 않는다.
+	if (chunks.find(chunkPos) != chunks.end())
+		return;
+
+	Chunk* newChunk = new Chunk(x, z, this);
 	newChunk->SetTerrainHeight();
 	newChunk->PopulateVoxelMap();
-	newChunk->CreateMeshData();
-	chunks.insert({ {x, z}, newChunk });
+
+	// 기본 지형 생성 후, 서버에서 받은 변경을 덮어쓴다.
+	auto pending = pendingBlocks.find(chunkPos);
+	if (pending != pendingBlocks.end())
+	{
+		for (const auto& entry : pending->second)
+		{
+			const int localX = std::get<0>(entry.first);
+			const int y = std::get<1>(entry.first);
+			const int localZ = std::get<2>(entry.first);
+
+			newChunk->blocks[localX][y][localZ] = entry.second;
+		}
+
+		pendingBlocks.erase(pending);
+	}
+
+	// 이웃 청크가 새 청크의 blocks를 조회할 수 있게 먼저 등록한다.
+	chunks.emplace(chunkPos, newChunk);
+
+	// 변경된 blocks를 기준으로 메시를 만든다.
+	newChunk->ChangeMeshData();
+
+	// 새 청크 생성으로 달라진 이웃 청크의 경계면도 갱신한다.
+	auto refreshNeighbor = [this](int cx, int cz)
+		{
+			auto neighbor = chunks.find({ cx, cz });
+			if (neighbor != chunks.end())
+				neighbor->second->ChangeMeshData();
+		};
+
+	refreshNeighbor(x - 1, z);
+	refreshNeighbor(x + 1, z);
+	refreshNeighbor(x, z - 1);
+	refreshNeighbor(x, z + 1);
 }
 
 bool World::IsBlockInWorld(int world_x, int world_y, int world_z)
