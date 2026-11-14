@@ -1,4 +1,4 @@
-#include "world.h"
+﻿#include "world.h"
 #include "../chunk/chunk.h"
 #include "../character/character.h"
 
@@ -175,4 +175,62 @@ int World::WorldPosIsSolid(glm::vec3 pos)
 			return 2; // SOLID
 		}
 	}
+}
+
+void World::SetBlock(int x, int y, int z, BlockType type)
+{
+	// 청크 -19~19, 월드 좌표 -304~319, 높이 0~127
+	const int minCoord = -(WORLD_MAX - 1) * ChunkWidth;
+	const int maxCoord = WORLD_MAX * ChunkWidth; // 상한은 포함하지 않음
+
+	if (x < minCoord || x >= maxCoord ||
+		z < minCoord || z >= maxCoord ||
+		y < 0 || y >= ChunkHeight)
+	{
+		return;
+	}
+
+	// 현재 BlockType은 AIR부터 BRICK까지 연속된 값이다.
+	if (type < BlockType::AIR || type > BlockType::BRICK)
+		return;
+
+	// 음수 좌표도 청크 내부 좌표가 0~15가 되도록 계산한다.
+	const int localX = (x % ChunkWidth + ChunkWidth) % ChunkWidth;
+	const int localZ = (z % ChunkWidth + ChunkWidth) % ChunkWidth;
+	const int chunkX = (x - localX) / ChunkWidth;
+	const int chunkZ = (z - localZ) / ChunkWidth;
+
+	const std::pair<int, int> chunkPos{ chunkX, chunkZ };
+	auto it = chunks.find(chunkPos);
+
+	if (it == chunks.end())
+	{
+		// 같은 칸이 여러 번 변경되면 마지막 값만 보관한다.
+		pendingBlocks[chunkPos][std::make_tuple(localX, y, localZ)] = type;
+		return;
+	}
+
+	Chunk* chunk = it->second;
+	chunk->blocks[localX][y][localZ] = type;
+	chunk->ChangeMeshData();
+
+	// 경계의 블록을 바꾸면 이웃 청크의 보이는 면도 달라진다.
+	auto refreshNeighbor = [this](int cx, int cz)
+		{
+			auto neighbor = chunks.find({ cx, cz });
+			if (neighbor != chunks.end())
+				neighbor->second->ChangeMeshData();
+		};
+
+	if (localX == 0)
+		refreshNeighbor(chunkX - 1, chunkZ);
+
+	if (localX == ChunkWidth - 1)
+		refreshNeighbor(chunkX + 1, chunkZ);
+
+	if (localZ == 0)
+		refreshNeighbor(chunkX, chunkZ - 1);
+
+	if (localZ == ChunkWidth - 1)
+		refreshNeighbor(chunkX, chunkZ + 1);
 }
