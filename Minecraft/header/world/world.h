@@ -1,4 +1,4 @@
-#ifndef WORLD_H
+﻿#ifndef WORLD_H
 #define WORLD_H
 
 
@@ -8,7 +8,7 @@
 #include <vector>
 #include "../PerlinNoise-master/PerlinNoise.hpp"
 #include "../skybox/skybox.h"
-
+#include <tuple>
 
 class Chunk;
 class Character;
@@ -27,7 +27,10 @@ private:
 	
 	void CreateNewChunk(int x, int z);
 	bool IsBlockInWorld(int world_x, int world_y, int world_z);
-
+	// 청크 좌표 → (청크 내부 x, y, z → 최종 블록 종류)
+	std::map<std::pair<int, int>, 
+		std::map<std::tuple<int, int, int>, 
+		BlockType>> pendingBlocks;
 public:
 	std::map<std::pair<int, int>, Chunk*> chunks;
 	std::vector<Chunk*> activeChunks;
@@ -48,6 +51,8 @@ public:
 	int GetTerrainHeight(int x, int z);
 	glm::vec3 GetStartPos();
 	int WorldPosIsSolid(glm::vec3 pos);
+	// 월드 좌표의 블록 변경. 메인 스레드에서 호출한다.
+	void SetBlock(int x, int y, int z, BlockType type);
 };
 
 
