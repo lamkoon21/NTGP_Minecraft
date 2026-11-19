@@ -250,6 +250,11 @@ void World::SetBlock(int x, int y, int z, BlockType type)
 	}
 
 	Chunk* chunk = it->second;
+
+	// 이미 같은 블록이면 메시를 다시 만들지 않는다.
+	if (chunk->blocks[localX][y][localZ] == type)
+		return;
+
 	chunk->blocks[localX][y][localZ] = type;
 	chunk->ChangeMeshData();
 
