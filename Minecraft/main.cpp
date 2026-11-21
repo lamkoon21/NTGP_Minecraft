@@ -189,25 +189,46 @@ int main(int argc, char** argv)
 	pause.EnterTexture_pause();
 	multi.EnterTexture_multi();
 
-	// 기존 월드, 플레이어 생성 코드
-	/*
-		world = new World(dis(gen));
-		world->GenerateWorld();
-		player = new Character(world);
-	*/
-
 	InitBuffer();
 
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 	glutMainLoop();
+	// 접속 중인 작업이 있으면 취소하고 종료를 기다린다.
 	if (serverJoinThread != NULL)
 	{
-		SetEvent(serverJoinCancelEvent);
-		WaitForSingleObject(serverJoinThread, INFINITE);
-		FinishServerJoin(false);
+		if (serverJoinCancelEvent == NULL ||
+			!SetEvent(serverJoinCancelEvent))
+		{
+			std::cerr << "Failed to cancel the connection task.\n";
+			return EXIT_FAILURE;
+		}
+
+		const DWORD waitResult =
+			WaitForSingleObject(serverJoinThread, INFINITE);
+
+		if (waitResult != WAIT_OBJECT_0)
+		{
+			std::cerr << "Failed to wait for the connection task.\n";
+			return EXIT_FAILURE;
+		}
+
 		CloseHandle(serverJoinThread);
-		CloseHandle(serverJoinCancelEvent);
+		serverJoinThread = NULL;
 	}
+
+	// 접속 스레드가 종료된 뒤 미승인 소켓을 정리한다.
+	// 미승인 소켓이 없으면 아무 작업도 하지 않는다.
+	FinishServerJoin(false);
+
+	if (serverJoinCancelEvent != NULL)
+	{
+		CloseHandle(serverJoinCancelEvent);
+		serverJoinCancelEvent = NULL;
+	}
+
+	// TODO: 네트워크 종료 API가 구현되면 여기에서
+	// 승인된 연결의 송수신 스레드와 소켓 등을 정리한다.
+
 	return 0;
 }
 
@@ -370,10 +391,26 @@ void Display()
 
 	else if (pause.go_to_pause) pause.render_pause();				// 게임 중 일시정지
 
-	else															// 게임 중
+	else if (world != nullptr && player != nullptr)					// 게임 중
 	{
+		// 1. 월드
 		renderer.RenderWorld(world);
+
+		// 2. 원격 플레이어
+		// 월드의 깊이 정보가 남아 있을 때 그려야 벽에 가려진다.
+		for (Character* remote : Remotes())
+		{
+			if (remote == nullptr || remote == player)
+				continue;
+
+			renderer.RenderCharacter(remote);
+		}
+
+		// 3. 내 캐릭터
+		// 1인칭에서는 내부에서 깊이 버퍼를 지우고 팔을 그린다.
 		renderer.RenderCharacter(player);
+
+		// 4. 화면 UI
 		renderer.RenderUI(&gui, player);
 	}
 
