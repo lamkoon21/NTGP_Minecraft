@@ -370,10 +370,26 @@ void Display()
 
 	else if (pause.go_to_pause) pause.render_pause();				// 게임 중 일시정지
 
-	else															// 게임 중
+	else if (world != nullptr && player != nullptr)					// 게임 중
 	{
+		// 1. 월드
 		renderer.RenderWorld(world);
+
+		// 2. 원격 플레이어
+		// 월드의 깊이 정보가 남아 있을 때 그려야 벽에 가려진다.
+		for (Character* remote : Remotes())
+		{
+			if (remote == nullptr || remote == player)
+				continue;
+
+			renderer.RenderCharacter(remote);
+		}
+
+		// 3. 내 캐릭터
+		// 1인칭에서는 내부에서 깊이 버퍼를 지우고 팔을 그린다.
 		renderer.RenderCharacter(player);
+
+		// 4. 화면 UI
 		renderer.RenderUI(&gui, player);
 	}
 
