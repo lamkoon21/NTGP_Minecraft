@@ -189,13 +189,6 @@ int main(int argc, char** argv)
 	pause.EnterTexture_pause();
 	multi.EnterTexture_multi();
 
-	// 기존 월드, 플레이어 생성 코드
-	/*
-		world = new World(dis(gen));
-		world->GenerateWorld();
-		player = new Character(world);
-	*/
-
 	InitBuffer();
 
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
