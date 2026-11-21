@@ -200,14 +200,42 @@ int main(int argc, char** argv)
 
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 	glutMainLoop();
+	// 접속 중인 작업이 있으면 취소하고 종료를 기다린다.
 	if (serverJoinThread != NULL)
 	{
-		SetEvent(serverJoinCancelEvent);
-		WaitForSingleObject(serverJoinThread, INFINITE);
-		FinishServerJoin(false);
+		if (serverJoinCancelEvent == NULL ||
+			!SetEvent(serverJoinCancelEvent))
+		{
+			std::cerr << "Failed to cancel the connection task.\n";
+			return EXIT_FAILURE;
+		}
+
+		const DWORD waitResult =
+			WaitForSingleObject(serverJoinThread, INFINITE);
+
+		if (waitResult != WAIT_OBJECT_0)
+		{
+			std::cerr << "Failed to wait for the connection task.\n";
+			return EXIT_FAILURE;
+		}
+
 		CloseHandle(serverJoinThread);
-		CloseHandle(serverJoinCancelEvent);
+		serverJoinThread = NULL;
 	}
+
+	// 접속 스레드가 종료된 뒤 미승인 소켓을 정리한다.
+	// 미승인 소켓이 없으면 아무 작업도 하지 않는다.
+	FinishServerJoin(false);
+
+	if (serverJoinCancelEvent != NULL)
+	{
+		CloseHandle(serverJoinCancelEvent);
+		serverJoinCancelEvent = NULL;
+	}
+
+	// TODO: 네트워크 종료 API가 구현되면 여기에서
+	// 승인된 연결의 송수신 스레드와 소켓 등을 정리한다.
+
 	return 0;
 }
 

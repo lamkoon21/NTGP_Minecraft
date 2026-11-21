@@ -436,7 +436,10 @@ public:
 			else if (select_menu == 2)
 				go_to_multi = true;
 			else if (select_menu == -1)
-				exit(0);
+			{
+				glutLeaveMainLoop();
+				return;
+			}
 
 			select_menu = 0;
 			break;
@@ -462,7 +465,10 @@ public:
 
 			//quit button
 			if (0.013f < x && x < 0.45f && -0.73f < y && y < -0.57f)
-				exit(0);
+			{
+				glutLeaveMainLoop();
+				return;
+			}
 		}
 
 	}
