@@ -50,21 +50,20 @@ DWORD WINAPI RecvThread(LPVOID arg)
 			break;
 		len += received;
 
-		while (len >= (int)sizeof(PacketHeader))
+		while (true)
 		{
+			// 완성된 패킷 추출, 아직 덜 받은 데이터는 다음 수신까지 보관
+			ReceivedPacket packet{};
+			const ExtractResult result = ExtractPacket(buf, len, packet.data);
+			if (result == EXTRACT_INCOMPLETE)
+				break;
+
 			// 잘못된 패킷 크기 수신 시 끊김 표시 후 수신 종료
-			PacketHeader header;
-			memcpy(&header, buf, sizeof(header));
-			if (header.size < sizeof(PacketHeader) || header.size > MAX_PACKET_SIZE)
+			if (result == EXTRACT_INVALID)
 			{
 				client->disconnected = true;
 				return 0;
 			}
-
-			// 완성된 패킷 추출, 아직 덜 받은 데이터는 다음 수신까지 보관
-			ReceivedPacket packet{};
-			if (!ExtractPacket(buf, len, packet.data))
-				break;
 
 			// 임계 영역 안에서 수신 패킷을 큐에 복사
 			EnterCriticalSection(&client->queueCS);
@@ -258,3 +257,4 @@ bool FinishServerJoin(bool acceptJoin)
 
 	return true;
 }
+
