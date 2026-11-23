@@ -14,6 +14,7 @@ const std::vector<Character*>& Remotes();
 void SendMove(const Character* player);
 
 DWORD WINAPI RecvThread(LPVOID arg);
+DWORD WINAPI SendThread(LPVOID arg);
 bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed, HANDLE cancelEvent = NULL);
 bool FinishServerJoin(bool acceptJoin);
 

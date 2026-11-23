@@ -326,13 +326,10 @@ enum ExtractResult {
 // buf : recv()로 받은 바이트를 이어 붙여 둔 버퍼. 앞에서부터 len바이트가 들어 있다.
 // len : buf에 들어 있는 바이트 수. 패킷을 꺼내면 그만큼 줄어든다 (그래서 참조로 받는다).
 // out : 꺼낸 패킷을 복사해 줄 곳. MAX_PACKET_SIZE바이트 이상이어야 한다.
-// 반환 : EXTRACT_INCOMPLETE = 아직 덜 모였으므로 buf와 len을 유지하고 다음 recv()를 기다린다.
-//        EXTRACT_COMPLETE   = 패킷 하나를 out에 복사하고 남은 바이트를 앞으로 당긴다.
-//        EXTRACT_INVALID    = 크기가 잘못됐으므로 len을 0으로 비우고 호출한 쪽에서 연결을 종료한다.
-//
-// 수신 스레드는 EXTRACT_COMPLETE인 동안 반복해서 패킷을 꺼내 큐에 넣는다.
-// EXTRACT_INCOMPLETE면 더 받고, EXTRACT_INVALID면 수신을 끝낸다.
-// TCP에는 패킷 경계 표시가 없으므로 잘못된 크기를 받으면 이어서 처리할 수 없다.
+// 반환 : EXTRACT_INCOMPLETE = 데이터 부족, 버퍼 유지
+//        EXTRACT_COMPLETE = 패킷 추출 완료
+//        EXTRACT_INVALID = 잘못된 크기, 버퍼 초기화
+// EXTRACT_INVALID면 호출한 쪽에서 연결 종료
 inline ExtractResult ExtractPacket(char* buf, int& len, char* out)
 {
     // 1) 헤더 3바이트도 안 온 경우
@@ -345,7 +342,7 @@ inline ExtractResult ExtractPacket(char* buf, int& len, char* out)
     memcpy(&header, buf, sizeof(header));
     const int size = header.size;
 
-    // 3) 패킷 크기가 허용 범위를 벗어난 경우
+    // 3) 잘못된 크기
     if (size < static_cast<int>(sizeof(PacketHeader)) || size > MAX_PACKET_SIZE) {
         len = 0;
         return EXTRACT_INVALID;
@@ -364,16 +361,16 @@ inline ExtractResult ExtractPacket(char* buf, int& len, char* out)
 }
 
 
-// ---------------------------------------------------------------------------
-// SendBuffer : 버퍼 전체 전송 (블로킹)
-// ---------------------------------------------------------------------------
+// 버퍼 전체 전송
 inline bool SendBuffer(SOCKET sock, const void* buffer, int len)
 {
+    // 입력값 검사
     if (len < 0 || (buffer == nullptr && len > 0))
         return false;
 
     const char* data = static_cast<const char*>(buffer);
     int sent = 0;
+    // 남은 데이터를 이어서 전송
     while (sent < len) {
         const int result = send(sock, data + sent, len - sent, 0);
         if (result <= 0)

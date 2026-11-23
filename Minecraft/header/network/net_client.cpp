@@ -4,6 +4,9 @@
 #include <queue>
 #include "../character/character.h"
 
+static constexpr int SELECT_TIMEOUT_MS = 200;
+static constexpr DWORD PING_INTERVAL_MS = 1000;
+
 // 수신 큐에 복사해서 보관할 패킷 데이터
 typedef struct ReceivedPacket
 {
@@ -22,6 +25,10 @@ typedef struct NetClient
 	bool queueCSInitialized = false;	// 연결 해제 시 임계 영역 정리 여부 확인
 	std::atomic<bool> disconnected{};	// 게임 갱신에서 서버 연결 끊김 확인
 	uint8_t playerId = MAX_PLAYERS;		// 원격 플레이어 처리에서 내 ID 구분
+	HANDLE quitEvent = NULL;				// 종료 요청 (수동 리셋)
+	HANDLE sendEvent = NULL;				// 송신 알림 (자동 리셋)
+	CRITICAL_SECTION sendCS;
+	std::vector<char> sendBuf;
 
 } NetClient;
 
@@ -42,15 +49,28 @@ DWORD WINAPI RecvThread(LPVOID arg)
 	char buf[BUF_SIZE];
 	int len = 0;
 
-	while (true)
+	bool receiving = true;
+	while (receiving && (client->quitEvent == NULL ||
+		WaitForSingleObject(client->quitEvent, 0) == WAIT_TIMEOUT))
 	{
+		fd_set readset;
+		FD_ZERO(&readset);
+		FD_SET(sock, &readset);
+		timeval timeout = { 0, SELECT_TIMEOUT_MS * 1000 };
+		const int ready = select(0, &readset, NULL, NULL, &timeout);
+		if ((client->quitEvent != NULL && WaitForSingleObject(client->quitEvent, 0) != WAIT_TIMEOUT) ||
+			ready == SOCKET_ERROR)
+			break;
+		if (ready == 0)
+			continue;
+
 		// 버퍼의 남은 공간에 서버 데이터 수신
 		const int received = recv(sock, buf + len, BUF_SIZE - len, 0);
 		if (received <= 0)
 			break;
 		len += received;
 
-		while (true)
+		while (client->quitEvent == NULL || WaitForSingleObject(client->quitEvent, 0) == WAIT_TIMEOUT)
 		{
 			// 완성된 패킷 추출, 아직 덜 받은 데이터는 다음 수신까지 보관
 			ReceivedPacket packet{};
@@ -61,8 +81,8 @@ DWORD WINAPI RecvThread(LPVOID arg)
 			// 잘못된 패킷 크기 수신 시 끊김 표시 후 수신 종료
 			if (result == EXTRACT_INVALID)
 			{
-				client->disconnected = true;
-				return 0;
+				receiving = false;
+				break;
 			}
 
 			// 임계 영역 안에서 수신 패킷을 큐에 복사
@@ -74,7 +94,52 @@ DWORD WINAPI RecvThread(LPVOID arg)
 
 	// 서버 종료 또는 수신 오류를 게임 갱신에 전달
 	client->disconnected = true;
+	if (client->quitEvent != NULL)
+		SetEvent(client->quitEvent);
 
+	return 0;
+}
+
+// 송신 버퍼 전송
+DWORD WINAPI SendThread(LPVOID arg)
+{
+	NetClient* client = (NetClient*)arg;
+	if (client == NULL || client->sock == INVALID_SOCKET ||
+		client->quitEvent == NULL || client->sendEvent == NULL)
+		return 0;
+
+	const HANDLE events[] = { client->quitEvent, client->sendEvent };
+	std::vector<char> buffer;
+	ULONGLONG nextPing = GetTickCount64() + PING_INTERVAL_MS;
+	while (true)
+	{
+		const ULONGLONG now = GetTickCount64();
+		const DWORD timeout = now < nextPing ? static_cast<DWORD>(nextPing - now) : 0;
+		const DWORD result = WaitForMultipleObjects(2, events, FALSE, timeout);
+		if ((result != WAIT_OBJECT_0 + 1 && result != WAIT_TIMEOUT) ||
+			WaitForSingleObject(client->quitEvent, 0) != WAIT_TIMEOUT)
+			break;
+
+		EnterCriticalSection(&client->sendCS);
+		buffer.swap(client->sendBuf);
+		LeaveCriticalSection(&client->sendCS);
+
+		// 1초마다 핑 추가
+		if (GetTickCount64() >= nextPing)
+		{
+			CS_PING_PACKET ping{};
+			const char* data = reinterpret_cast<const char*>(&ping);
+			buffer.insert(buffer.end(), data, data + sizeof(ping));
+			nextPing = GetTickCount64() + PING_INTERVAL_MS;
+		}
+
+		if (!buffer.empty() && !SendBuffer(client->sock, buffer.data(), static_cast<int>(buffer.size())))
+			break;
+		buffer.clear();
+	}
+
+	client->disconnected = true;
+	SetEvent(client->quitEvent);
 	return 0;
 }
 
