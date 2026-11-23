@@ -637,13 +637,17 @@ glm::mat4 Character::GetViewMatrix()
 }
 
 void Character::ApplyRemoteState(const glm::vec3& pos,
-    float yaw, float pitch, int block)
+    float yaw, float pitch, int block, int flags)
 {
-    // 받은 위치를 적용하기 전에 이동 여부를 확인한다.
+    // 위치를 덮어쓰기 전에 이동 여부를 확인한다.
     const glm::vec3 delta = pos - Position;
     const bool moved = glm::dot(delta, delta) > 0.000001f;
 
     Position = pos;
+
+    // 0=걷기, 1=달리기, 2=웅크리기
+    // 배열 인덱스로 사용하므로 범위를 검사한다.
+    move_state = (flags >= 0 && flags <= 2) ? flags : 0;
 
     // 패킷의 yaw는 카메라 기준, 모델의 yaw는 반대 부호다.
     camera.Yaw = yaw;
@@ -652,8 +656,7 @@ void Character::ApplyRemoteState(const glm::vec3& pos,
     HeadPitch = pitch;
     BodyYaw = HeadYaw;
 
-    // 입력 없이 받은 슬롯 번호만 적용한다.
-    // 최초 수신에는 같은 슬롯이어도 정점 생성이 필요할 수 있다.
+    // block은 BlockType이 아닌 슬롯 번호다.
     if (block >= 0 && block < 9 &&
         (block_kind != block || block_vertices.empty()))
     {
@@ -661,24 +664,29 @@ void Character::ApplyRemoteState(const glm::vec3& pos,
         SetBlockVertices();
     }
 
-    // 이동 모드는 패킷에 없으므로 기본 걷기 값을 사용한다.
+    // 이동 모드가 바뀌면 기존 흔들림을 새 범위 안으로 제한한다.
+    const float maxShake = MAX_SHAKE_DEG[move_state];
+    const float addShake = ADD_SHAKE_DEG[move_state];
+
+    shake_deg = glm::clamp(shake_deg, -maxShake, maxShake);
+
     if (moved)
     {
         if (shake_state)
         {
-            shake_deg += ADD_SHAKE_DEG[0];
-            if (shake_deg >= MAX_SHAKE_DEG[0])
+            shake_deg += addShake;
+            if (shake_deg >= maxShake)
             {
-                shake_deg = MAX_SHAKE_DEG[0];
+                shake_deg = maxShake;
                 shake_state = false;
             }
         }
         else
         {
-            shake_deg -= ADD_SHAKE_DEG[0];
-            if (shake_deg <= -MAX_SHAKE_DEG[0])
+            shake_deg -= addShake;
+            if (shake_deg <= -maxShake)
             {
-                shake_deg = -MAX_SHAKE_DEG[0];
+                shake_deg = -maxShake;
                 shake_state = true;
             }
         }
@@ -690,6 +698,6 @@ void Character::ApplyRemoteState(const glm::vec3& pos,
             shake_deg = 0.0f;
     }
 
-    // 변경된 위치와 몸 각도로 신체 위치를 다시 계산한다.
+    // 변경된 위치와 각도로 신체 위치를 다시 계산한다.
     PosUpdate();
 }

@@ -114,9 +114,9 @@ public:
     void Update();
     glm::mat4 GetViewMatrix();
 
-    // ApplyRemoteState 선언
+    // ApplyRemoteState 선언 - 수정(11/20)
     void ApplyRemoteState(const glm::vec3& pos,
-        float yaw, float pitch, int block);
+        float yaw, float pitch, int block, int flags);
 };
 
 
