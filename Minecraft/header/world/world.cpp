@@ -12,6 +12,15 @@ World::World(int seed)
 	//player = Character(this);
 }
 
+World::~World()
+{
+	// 실제 청크를 소유하는 chunks에서만 삭제한다.
+	for (const auto& entry : chunks)
+	{
+		delete entry.second;
+	}
+}
+
 void World::GenerateWorld()
 {
 	activeChunks.clear();
