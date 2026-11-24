@@ -450,18 +450,35 @@ public:
 
 	void Input_keyboard(unsigned char key)
 	{
-		const bool connecting = message == "Connecting...";
+		// ESC는 접속·로딩 중에도 취소 요청을 허용한다.
+		if (key == 27)
+		{
+			request_connect = false;
+			go_to_title = true;
+			return;
+		}
+
+		// 접속 요청 대기·접속 중·로딩 중에는
+	// Enter와 IP 편집을 막는다.
+		const bool busy =
+			request_connect ||
+			message == "Connecting..." ||
+			is_loading;
+
+		if (busy || go_to_title)
+			return;
+
 		switch (key)
 		{
 		case 8: // BACKSPACE
-			if (!connecting && !ip.empty())
+			if (!ip.empty())
 				ip.pop_back();
 			break;
 
 		case 13: // ENTER
 			if (select_menu == -1)
 				go_to_title = true;
-			else if (!ip.empty() && !connecting)
+			else if (!ip.empty())
 				request_connect = true;
 			break;
 
@@ -471,7 +488,7 @@ public:
 
 		default:
 			// IPv4 주소: 숫자와 점만 입력, 최대 15글자
-			if (!connecting && ip.size() < maxIpLength && ((key >= '0' && key <= '9') || key == '.'))
+			if (ip.size() < maxIpLength && ((key >= '0' && key <= '9') || key == '.'))
 				ip += key;
 			break;
 		}
@@ -506,8 +523,10 @@ public:
 			Input_motion(x, y);
 
 			// enter button
-			if (select_menu == 1 && !ip.empty() && message != "Connecting...")
+			if (select_menu == 1 && !ip.empty() && !request_connect &&
+				!go_to_title && message != "Connecting..." && !is_loading)
 				request_connect = true;
+			
 
 			// quit button
 			else if (select_menu == -1) go_to_title = true;
