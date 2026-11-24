@@ -13,6 +13,8 @@
 #include <map>
 #include "../shader/shader.h"
 #include "../stb_image/stb_image.h"
+#include <cstdint>
+#include <string>
 
 float MUI_background[] = {
 	// 위치               // 컬러             // 텍스처 좌표
@@ -138,6 +140,12 @@ class Multi
 {
 public:
 	Shader multiShader;
+
+	bool is_loading = false;
+
+	// 초기 패킷 전체 개수와 실제 게임에 적용한 개수
+	uint32_t initial_packet_count = 0;
+	uint32_t applied_packet_count = 0;
 
 	void Init()
 	{
@@ -267,13 +275,19 @@ public:
 
 	void render_multi(int width, int height)
 	{
+		if (width <= 0 || height <= 0)
+			return;
+
 		multiShader.use();
 
+		// 배경: 기존 텍스처 유지
 		UseTexture_multi("background");
 		glBindVertexArray(VAO_MUI_background);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+		// 버튼·입력창·안내 문구: 기존 텍스처 유지
 		UseTexture_multi("button");
+
 		for (int i = 0; i < 3; ++i)
 		{
 			if (i == 0 && select_menu == 1)
@@ -289,15 +303,55 @@ public:
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		}
 
+		// 입력한 IP: 기존 글자 텍스처 유지
 		RenderIpText(width, height);
 
-		if (message == "Connecting..." || message == "Connection Failed")
+		// 로딩 중이 아닐 때 접속 상태 텍스처를 표시한다.
+		if (!is_loading &&
+			(message == "Connecting..." ||
+				message == "Connection Failed"))
 		{
-			int frame = message == "Connecting..." ? AnimationFrame() : 3;
+			const int frame =
+				message == "Connecting..." ? AnimationFrame() : 3;
+
 			UseTexture_multi("status");
 			glBindVertexArray(VAO_MUI_words[3]);
-			glDrawElementsBaseVertex(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, frame * 4);
+			glDrawElementsBaseVertex(
+				GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, frame * 4
+			);
+
+			return;
 		}
+
+		// 텍스처로 처리하지 않는 안내 문구
+		std::string statusText;
+
+		if (is_loading)
+		{
+			statusText = "Loading...";
+
+			if (initial_packet_count > 0)
+			{
+				const uint32_t applied =
+					(applied_packet_count > initial_packet_count)
+					? initial_packet_count
+					: applied_packet_count;
+
+				const int percent = static_cast<int>(
+					static_cast<uint64_t>(applied) * 100
+					/ initial_packet_count
+					);
+
+				statusText += " " + std::to_string(percent) + "%";
+			}
+		}
+		else
+		{
+			statusText = message;
+		}
+
+		if (!statusText.empty())
+			RenderStatusText(width, height, statusText);
 	}
 
 	void UseTexture_multi(const char* key)
@@ -379,6 +433,11 @@ public:
 
 		// 화면을 열자마자 입력 커서가 보이도록 깜빡임을 처음부터 시작한다.
 		cursorBlinkStart = std::chrono::steady_clock::now();
+
+		// 초기화
+		is_loading = false;
+		initial_packet_count = 0;
+		applied_packet_count = 0;
 	}
 
 	int AnimationFrame() const
@@ -540,6 +599,45 @@ private:
 		glBindBuffer(GL_ARRAY_BUFFER, IPtextVBO);
 		glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(IpTextVertex), vertices.data(), GL_STREAM_DRAW);
 		glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+	}
+
+	void RenderStatusText(int width, int height,
+		const std::string& text)
+	{
+		if (width <= 0 || height <= 0 || text.empty())
+			return;
+
+		GLint previousProgram = 0;
+		glGetIntegerv(GL_CURRENT_PROGRAM, &previousProgram);
+
+		glUseProgram(0);
+
+		glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT);
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_LIGHTING);
+		glDisable(GL_FOG);
+		glDisable(GL_ALPHA_TEST);
+
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+		const auto* bytes =
+			reinterpret_cast<const unsigned char*>(text.c_str());
+
+		const int textWidth =
+			glutBitmapLength(GLUT_BITMAP_HELVETICA_18, bytes);
+
+		// 입력창 아래, 뒤로 가기 버튼 위
+		glWindowPos2i(
+			(width - textWidth) / 2,
+			static_cast<int>(height * 0.39f)
+		);
+
+		glutBitmapString(GLUT_BITMAP_HELVETICA_18, bytes);
+
+		glPopAttrib();
+		glUseProgram(static_cast<GLuint>(previousProgram));
 	}
 };
 
