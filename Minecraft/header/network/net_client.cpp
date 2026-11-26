@@ -29,8 +29,8 @@ struct JoinResult
 
 typedef struct NetClient
 {
-	SOCKET sock;
-	HANDLE recvThread;
+	SOCKET sock = INVALID_SOCKET;
+	HANDLE recvThread = NULL;
 	std::vector<Character*> remotes;	// 내 캐릭터를 제외한 원격 플레이어 목록
 	bool winsockStarted = false;		// Winsock 초기화 성공 여부 기록, 재접속 시 중복 초기화 방지
 
@@ -42,6 +42,7 @@ typedef struct NetClient
 	HANDLE quitEvent = NULL;				// 종료 요청 (수동 리셋)
 	HANDLE sendEvent = NULL;				// 송신 알림 (자동 리셋)
 	CRITICAL_SECTION sendCS;
+	bool sendCSInitialized = false;	// 연결 해제 시 송신 임계 영역 정리 여부 확인
 	std::vector<char> sendBuf;
 
 	// ConnectThread에서 사용하는 접속 정보와 결과, 송신 스레드 핸들
@@ -50,12 +51,13 @@ typedef struct NetClient
 	HANDLE sendThread = NULL;
 	JoinResult joinResult;
 
+	SOCKET pendingJoinSocket = INVALID_SOCKET;	// 입장 결과 승인 전 보관하는 소켓
+	uint8_t pendingJoinPlayerId = MAX_PLAYERS;	// 입장 결과 승인 전 보관하는 내 ID
+
 } NetClient;
 
-// 서버 연결 소켓과 수신 스레드 핸들을 저장하는 전역 변수
-static NetClient net = { INVALID_SOCKET, NULL, {} };
-static SOCKET pendingJoinSocket = INVALID_SOCKET;
-static uint8_t pendingJoinPlayerId = MAX_PLAYERS;
+// 서버 접속 결과와 송수신 관리 정보를 저장하는 전역 변수
+static NetClient net{};
 
 DWORD WINAPI ConnectThread(LPVOID arg)
 {
@@ -67,8 +69,8 @@ DWORD WINAPI ConnectThread(LPVOID arg)
 	if (client->quitEvent == NULL || client->connectDoneEvent == NULL ||
 		client->sock != INVALID_SOCKET || client->recvThread != NULL ||
 		client->sendThread != NULL || client->sendEvent != NULL ||
-		client->queueCSInitialized ||
-		(client == &net && pendingJoinSocket != INVALID_SOCKET)) {
+		client->queueCSInitialized || client->sendCSInitialized ||
+		client->pendingJoinSocket != INVALID_SOCKET) {
 		client->joinResult = {};
 		client->joinResult.errorMessage = "Connection is not ready";
 		if (client->connectDoneEvent != NULL)
@@ -78,7 +80,6 @@ DWORD WINAPI ConnectThread(LPVOID arg)
 
 	client->disconnected = false;
 	JoinResult result;
-	bool sendCSInitialized = false;
 	SOCKET sock = INVALID_SOCKET;
 	WSAEVENT socketEvent = WSA_INVALID_EVENT;
 	const char* error = "Connection failed";
@@ -300,7 +301,7 @@ DWORD WINAPI ConnectThread(LPVOID arg)
 		client->queueCSInitialized = true;
 		if (!InitializeCriticalSectionAndSpinCount(&client->sendCS, 0))
 			break;
-		sendCSInitialized = true;
+		client->sendCSInitialized = true;
 		client->sendEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 		if (client->sendEvent == NULL)
 			break;
@@ -361,8 +362,9 @@ DWORD WINAPI ConnectThread(LPVOID arg)
 			CloseHandle(client->sendEvent);
 			client->sendEvent = NULL;
 		}
-		if (sendCSInitialized) {
+		if (client->sendCSInitialized) {
 			DeleteCriticalSection(&client->sendCS);
+			client->sendCSInitialized = false;
 		}
 		if (client->queueCSInitialized) {
 			DeleteCriticalSection(&client->queueCS);
@@ -524,7 +526,7 @@ bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed, HANDLE 
 {
 	// 서버 주소가 없거나 이미 연결된 경우 접속 요청 거절
 	if (ipv4 == nullptr || net.sock != INVALID_SOCKET || net.recvThread != NULL ||
-		pendingJoinSocket != INVALID_SOCKET)
+		net.pendingJoinSocket != INVALID_SOCKET)
 		return false;
 
 	if (cancelEvent != NULL && WaitForSingleObject(cancelEvent, 0) == WAIT_OBJECT_0)
@@ -618,8 +620,8 @@ bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed, HANDLE 
 		return false;
 
 	// 서버 입장 결과 보관
-	pendingJoinSocket = sock;
-	pendingJoinPlayerId = packet.id;
+	net.pendingJoinSocket = sock;
+	net.pendingJoinPlayerId = packet.id;
 	if (cancelEvent == NULL && !FinishServerJoin(true))
 		return false;
 
@@ -630,11 +632,11 @@ bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed, HANDLE 
 
 bool FinishServerJoin(bool acceptJoin)
 {
-	if (pendingJoinSocket == INVALID_SOCKET)
+	if (net.pendingJoinSocket == INVALID_SOCKET)
 		return false;
 
-	const SOCKET sock = pendingJoinSocket;
-	pendingJoinSocket = INVALID_SOCKET;
+	const SOCKET sock = net.pendingJoinSocket;
+	net.pendingJoinSocket = INVALID_SOCKET;
 	if (!acceptJoin) {
 		closesocket(sock);
 		return false;
@@ -649,7 +651,7 @@ bool FinishServerJoin(bool acceptJoin)
 
 	// 수신 스레드에서 사용할 소켓과 연결 상태 준비
 	net.sock = sock;
-	net.playerId = pendingJoinPlayerId;
+	net.playerId = net.pendingJoinPlayerId;
 	net.disconnected = false;
 
 	// 서버의 후속 패킷을 받을 수신 스레드 생성
