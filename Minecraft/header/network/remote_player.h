@@ -71,6 +71,7 @@ inline bool RemotePlayer::Sample(
     if (renderTick >= static_cast<double>(snapshots.back().tick))
     {
         outState = snapshots.back().state;
+        return true;
     }
 
     for (std::size_t i = 1; i < snapshots.size(); ++i)
