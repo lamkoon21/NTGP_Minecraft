@@ -41,7 +41,7 @@ public:
 
 	World();
 	World(int seed);
-
+	~World();
 
 	void Init();
 	void GenerateWorld();
