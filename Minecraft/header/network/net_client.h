@@ -13,6 +13,7 @@ const std::vector<Character*>& Remotes();
 // 내 플레이어의 위치, 시선, 든 블록 정보를 서버로 전송
 void SendMove(const Character* player);
 
+DWORD WINAPI ConnectThread(LPVOID arg);
 DWORD WINAPI RecvThread(LPVOID arg);
 DWORD WINAPI SendThread(LPVOID arg);
 bool ConnectServer(const char* ipv4, uint8_t& outPlayerId, int& outSeed, HANDLE cancelEvent = NULL);
